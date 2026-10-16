@@ -856,7 +856,7 @@ function monthGrid(list){
   const rows=list.map(s=>{const M=monthSum(s.id);
     return `<tr><td class="g-name"><b>${esc(s.name)}</b><div class="small muted">${esc([s.dept,shiftOf(s.id).name].filter(Boolean).join(' · '))}</div></td>${M.st.map((x,i)=>{
       const tip=(x.a&&x.a.checkIn?`${x.a.checkIn}${x.a.checkOut?' – '+x.a.checkOut:' (thiếu giờ ra)'}${x.late?' · muộn '+x.late+' phút':''}${x.early?' · về sớm '+x.early+' phút':''}${x.worked!=null?' · làm '+Math.round(x.worked/6)/10+' giờ':''} · ${x.cong} công`:x.l?x.l.type:x.k==='absent'?'Vắng không phép':x.k==='off'?'Ngày nghỉ':'')+(x.ot?' · tăng ca '+x.ot+' giờ':'')+(x.note?' · '+x.note:'');
-      return `<td class="g g-${x.k}${x.ot?' g-ot':''}${x.missingOut?' g-miss':''}" title="${dmy(days[i])}: ${esc(tip)}">${sym(x)}</td>`;}).join('')}
+      return `<td class="g g-${x.k}${x.ot?' g-ot':''}${x.missingOut?' g-miss':''}"${isAdmin()&&!LOCKED()&&x.k!=='future'?` data-act="attday" data-sid="${s.id}" data-ds="${days[i]}" style="cursor:pointer"`:''} title="${dmy(days[i])}: ${esc(tip)}">${sym(x)}</td>`;}).join('')}
       <td class="num"><b>${M.cong}</b>${M.paidLeave?`<div class="small muted">+${M.paidLeave} phép</div>`:''}</td><td class="num ${M.lateN?'neg':''}">${M.lateN}${M.lateMin?`<div class="small">${M.lateMin}′</div>`:''}</td>
       <td class="num">${M.earlyMin?M.earlyMin+'′':'0'}</td><td class="num">${M.ot||0}</td><td class="num">${M.leave}</td><td class="num ${M.absent?'neg':''}">${M.absent}</td></tr>`;}).join('');
   return `<div class="tablewrap"><table class="grid-att"><thead><tr><th class="g-name">Nhân viên</th>${days.map(ds=>{const d=new Date(ds+'T00:00:00');return `<th class="g ${isOffDay(ds)?'g-offh':''}">${+ds.slice(8)}<div>${wd[d.getDay()]}</div></th>`;}).join('')}<th class="num">Công</th><th class="num">Muộn</th><th class="num">Về sớm</th><th class="num">Tăng ca (giờ)</th><th class="num">Phép</th><th class="num">Vắng</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -1064,6 +1064,7 @@ function vHr(){
     ${locked?`<button class="btn" data-act="lockm" data-v="0">Mở chốt</button>`:`<button class="btn primary" data-act="lockm" data-v="1">Chốt công tháng</button>`}</div>
   ${locked?'<div class="small muted" style="margin-bottom:6px">Tháng đã chốt: không ai sửa được công, đơn, thưởng phạt của tháng này. Máy chấm công cũng không ghi đè.</div>':''}
   ${monthGrid()}
+  ${locked?'':'<div class="small muted" style="margin-top:4px">Bấm vào một ô để sửa giờ vào/ra của người đó ngày đó (hoặc xóa).</div>'}
   <div class="panel" style="margin-top:20px"><div class="toolbar" style="margin-bottom:6px"><h2 style="margin:0">Ca làm việc</h2><span class="spacer"></span><button class="btn" data-act="add" data-col="shifts">+ Thêm ca</button></div>
     <div class="list"><div class="li"><div class="t"><b>Ca chung</b> · ${esc(h.workStart)}–${esc(h.workEnd)} · nghỉ ${+h.breakMin||0}′ · cho phép muộn ${+h.graceMin||0}′<div class="small muted">Áp dụng cho ai chưa được gán ca. Sửa ở phần Cài đặt bên dưới.</div></div></div>
     ${(D.shifts||[]).map(x=>`<div class="li" data-act="edit" data-col="shifts" data-id="${x.id}" style="cursor:pointer"><div class="t"><b>${esc(x.name)}</b> · ${esc(x.start)}–${esc(x.end)} · nghỉ ${+x.breakMin||0}′ · cho phép muộn ${+x.graceMin||0}′<div class="small muted">${D.staff.filter(s=>s.shiftId===x.id).map(s=>esc(s.name)).join(', ')||'Chưa gán ai. Gán trong hồ sơ nhân viên.'}</div></div></div>`).join('')}</div></div>
@@ -1098,7 +1099,7 @@ function clockBox(){
   const late=Math.max(0,toMin(a.checkIn)-toMin(sh.start)-(+sh.graceMin||0));
   const src=a.source==='Máy chấm công'?' <span class="small muted">(máy chấm công)</span>':'';
   if(!a.checkOut) return `<p style="margin-top:0">Đã vào ca lúc <b>${esc(a.checkIn)}</b>${src} ${late?`<span class="pill warn">Muộn ${late} phút</span>`:'<span class="pill good">Đúng giờ</span>'}</p><button class="btn big-btn" data-act="clockout">Tan ca</button>${gps}`;
-  return `<p style="margin-top:0">Hôm nay: <b>${esc(a.checkIn)} – ${esc(a.checkOut)}</b>${src} <span class="pill good">Đã xong</span></p>`;
+  return `<p style="margin-top:0">Hôm nay: <b>${esc(a.checkIn)} – ${esc(a.checkOut)}</b>${src} <span class="pill good">Đã xong</span></p><button class="btn" data-act="clockout">Chấm ra lại (về muộn hơn)</button><div class="small muted" style="margin-top:6px">Lỡ bấm tan ca sớm? Bấm lại lúc về, hệ thống lấy giờ ra muộn nhất.</div>`;
 }
 function getLoc(){return new Promise((res,rej)=>{
   if(!navigator.geolocation) return rej(new Error('Thiết bị không hỗ trợ định vị.'));
@@ -1274,7 +1275,8 @@ function attSyncPanel(){
     <p class="small muted" style="margin-top:0">Chương trình trên máy tính công ty đọc máy chấm công qua mạng LAN mỗi 15 phút rồi gửi lên đây.${last?` Lần nhận gần nhất: <b>${last.toLocaleString('vi-VN')}</b> (${nf(a.lastCount)} lượt quẹt).`:''}</p>
     ${ATTTOKEN?`<div class="notice" style="background:var(--accent-soft);color:var(--accent)">Mã đồng bộ (chỉ hiện một lần, dán vào file <b>caidat.txt</b> của chương trình):<div class="copyrow" style="margin-top:6px"><code id="atttok">${esc(ATTTOKEN)}</code><button class="btn" data-act="copytok">Chép</button></div></div>`:''}
     ${a.hasToken&&ATTTOKEN===''&&!last?'<p class="small muted">Mã đã tạo. Nếu quên mã, bấm "Tạo mã mới" rồi dán lại vào chương trình.</p>':''}
-    ${a.users.length?`<h2 style="margin-top:12px">Gán mã vân tay với nhân viên</h2><div class="tablewrap"><table><thead><tr><th>Mã trên máy</th><th>Tên trên máy</th><th>Là nhân viên</th></tr></thead><tbody>
+    ${a.users.length?`<div class="toolbar" style="margin:12px 0 6px"><h2 style="margin:0">Gán mã vân tay với nhân viên</h2><span class="spacer"></span>${a.users.some(u=>!u.staffId)?`<button class="btn primary" data-act="mkstaff">Tạo nhân viên cho ${a.users.filter(u=>!u.staffId).length} mã chưa gán</button>`:''}</div>
+      <p class="small muted" style="margin-top:0">Ai đã có trên web thì chọn tên ở cột cuối. Ai chưa có (nhân sự cũ chưa nhập) thì bấm nút trên để web tự tạo theo tên trên máy, mỗi người một mã PIN riêng (xem ở mục Nhân viên). Sau đó vào mục Nhân viên sửa lại họ tên có dấu, phòng ban.</p><div class="tablewrap"><table><thead><tr><th>Mã trên máy</th><th>Tên trên máy</th><th>Là nhân viên</th></tr></thead><tbody>
       ${a.users.map(u=>`<tr><td><b>${esc(u.uid)}</b></td><td>${esc(u.name)}</td><td><select id="am-${esc(u.uid)}" data-attmap="${esc(u.uid)}" aria-label="Nhân viên"><option value="">— Chưa gán —</option>${D.staff.map(x=>`<option value="${x.id}" ${x.id===u.staffId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
       <div class="small muted" style="margin-top:6px">Mã chưa gán thì lượt quẹt được giữ lại, gán xong sẽ tự đưa vào bảng công.</div>`:''}
   </div>`;
@@ -1472,6 +1474,9 @@ document.addEventListener('click',async e=>{
   else if(act==='leave'){const x=D.leaves.find(l=>l.id===a.dataset.id);if(x)await act_(a,'save',['leaves',x.id,{...x,status:a.dataset.st}],a.dataset.st==='Đã duyệt'?'Đã duyệt đơn':'Đã từ chối đơn');}
   else if(act==='atttoken'){if(a.dataset.sure!=='1'&&SETTINGS&&SETTINGS.attSync&&SETTINGS.attSync.hasToken){a.dataset.sure='1';a.textContent='Mã cũ sẽ ngừng hoạt động. Bấm lần nữa';return;}
     a.disabled=true;try{const r=await run('newAttToken',PIN);ATTTOKEN=r.attToken||'';apply(r);toast('Đã tạo mã đồng bộ');}catch(err){toast(msg(err));a.disabled=false;}}
+  else if(act==='mkstaff'){if(a.dataset.sure!=='1'){a.dataset.sure='1';a.textContent='Bấm lần nữa để tạo';return;}
+    a.disabled=true;a.textContent='Đang tạo…';try{const r=await run('createStaffFromMachine',PIN,[]);apply(r);toast('Đã tạo '+(r.created||0)+' nhân viên. Xem mã PIN ở mục Nhân viên');}catch(err){toast(msg(err));a.disabled=false;a.textContent='Thử lại';}}
+  else if(act==='attday'){const r=D.attendance.find(x=>x.staffId===a.dataset.sid&&x.date===a.dataset.ds);r?openForm('attendance',r.id):openForm('attendance',null,{date:a.dataset.ds,staffId:a.dataset.sid});}
   else if(act==='copytok'){const t=document.getElementById('atttok').textContent;try{await navigator.clipboard.writeText(t);toast('Đã chép mã');}catch(_){toast('Bôi đen mã rồi bấm Ctrl+C');}}
   else if(act==='impcancel'){IMP=null;render();}
   else if(act==='impgo'){const r=impRecords();if(!r.recs.length)return;a.disabled=true;a.textContent='Đang nhập…';
