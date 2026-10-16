@@ -238,6 +238,7 @@ td.g-ot{box-shadow:inset 0 -3px 0 var(--views)} td.g-miss{box-shadow:inset 0 0 0
 .clockstrip>div{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .clockstrip p{margin:0!important}
 .clockstrip .big-btn{padding:9px 22px}
+.photo-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}.photo-ov img{max-width:100%;max-height:85vh;border-radius:8px}.photo-ov .muted{color:#ddd}.linkbtn{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -447,10 +448,10 @@ FIELDS.leaves=[{k:'staffId',l:'Người làm đơn',t:'staff',req:1},{k:'type',l
   {k:'timeIn',l:'Giờ vào',t:'time',only:['Đi muộn / về sớm','Quên chấm công']},{k:'timeOut',l:'Giờ ra',t:'time',only:['Đi muộn / về sớm','Quên chấm công']},{k:'hours',l:'Số giờ',t:'num',step:'0.5',only:['Tăng ca']},
   {k:'reason',l:'Lý do',t:'area',wide:1},{k:'status',l:'Trạng thái',t:'sel',o:['Chờ duyệt','Đã duyệt','Từ chối']}];
 FIELDS.payadj=[{k:'month',l:'Tháng',t:'month',req:1},{k:'staffId',l:'Nhân viên',t:'staff',req:1},{k:'type',l:'Khoản',t:'sel',o:ADJ_TYPES},{k:'amount',l:'Số tiền (₫)',t:'num',req:1},{k:'note',l:'Lý do',t:'area',wide:1}];
-FIELDS.attendance=[{k:'date',l:'Ngày',t:'date',req:1},{k:'staffId',l:'Nhân viên',t:'staff',req:1},{k:'checkIn',l:'Giờ vào (HH:mm)',t:'text',ph:'08:30'},{k:'checkOut',l:'Giờ ra (HH:mm)',t:'text',ph:'17:30'},{k:'note',l:'Ghi chú',t:'area',wide:1}];
+FIELDS.attendance=[{k:'date',l:'Ngày',t:'date',req:1},{k:'staffId',l:'Nhân viên',t:'staff',req:1},{k:'checkIn',l:'Giờ vào (HH:mm)',t:'text',ph:'08:30'},{k:'checkOut',l:'Giờ ra (HH:mm)',t:'text',ph:'17:30'},{k:'note',l:'Ghi chú',t:'area',wide:1},{k:'locIn',l:'Vị trí lúc vào',t:'text',map:1},{k:'locOut',l:'Vị trí lúc ra',t:'text',map:1},{k:'photoIn',l:'Ảnh lúc vào',t:'photo'},{k:'photoOut',l:'Ảnh lúc ra',t:'photo'}];
 FIELDS.shifts=[{k:'name',l:'Tên ca',t:'text',req:1,ph:'VD: Ca sáng'},{k:'start',l:'Giờ vào',t:'time',req:1},{k:'end',l:'Giờ ra',t:'time',req:1},
   {k:'breakMin',l:'Nghỉ trưa (phút)',t:'num',d:60},{k:'graceMin',l:'Cho phép muộn (phút)',t:'num',d:0}];
-FIELDS.staff.splice(4,0,{k:'shiftId',l:'Ca làm việc',t:'shift'});
+FIELDS.staff.splice(4,0,{k:'shiftId',l:'Ca làm việc',t:'shift'},{k:'remote',l:'Làm việc bên ngoài (chấm bằng điện thoại, ghi vị trí + chụp ảnh)',t:'sel',o:['Không','Có']},{k:'status',l:'Trạng thái',t:'sel',o:['Đang làm','Đã nghỉ']},{k:'endDate',l:'Ngày nghỉ việc',t:'date'});
 FIELDS.care=[{k:'customer',l:'Khách hàng',t:'text'},{k:'phone',l:'Số điện thoại',t:'text',req:1},{k:'date',l:'Ngày gọi',t:'date',req:1},{k:'staffId',l:'Người chăm sóc',t:'staff'},
   {k:'result',l:'Kết quả',t:'sel',o:CARE_RESULTS},{k:'nextDate',l:'Hẹn gọi lại',t:'date'},{k:'note',l:'Ghi chú',t:'area',wide:1}];
 const NAMES={shifts:'ca làm việc',attendance:'chấm công',leaves:'đơn',payadj:'khoản thưởng / phạt',care:'lần chăm sóc',contents:'nội dung',mktplan:'kế hoạch tháng',staff:'nhân viên',tasks:'công việc',reports:'báo cáo',orders:'đơn hàng',expenses:'khoản chi',views:'video / bài'};
@@ -466,6 +467,8 @@ const dmy=s=>s?String(s).slice(8,10)+'/'+String(s).slice(5,7):'';
 const sum=(a,k)=>a.reduce((t,x)=>t+(+x[k]||0),0);
 const inMonth=r=>String(r.date||'').startsWith(S.month);
 const chanName=id=>{const c=D.channels.find(x=>x.id===id);return c?c.name:'';};
+const isActive=s=>s&&s.status!=='Đã nghỉ';
+const staffFor=v=>D.staff.filter(s=>isActive(s)||s.id===v);
 const staffName=id=>{const s=D.staff.find(x=>x.id===id);return s?s.name:'—';};
 const pct=(v,t)=>t>0?Math.round(v/t*100):null;
 const isAdmin=()=>!!(ME&&ME.admin);
@@ -488,7 +491,7 @@ function calc(){
   const exps=D.expenses.filter(inMonth), adsM=(D.ads||[]).filter(inMonth), adsSpend=sum(adsM,'spend'), expTotal=sum(exps,'amount')+adsSpend;
   const byCat={}; exps.forEach(e=>{const c=e.category||'Khác';byCat[c]=(byCat[c]||0)+(+e.amount||0)}); if(adsSpend) byCat['Quảng cáo Facebook (tự động)']=adsSpend;
   const views=D.views.filter(inMonth).concat(D.posts.filter(inMonth).map(p=>({...p,auto:true}))), viewTotal=sum(views,'views');
-  const people=D.staff.map(s=>{const my=valid.filter(o=>o.staffId===s.id), rev=sum(my,'amount'), vids=views.filter(v=>v.staffId===s.id);
+  const people=D.staff.filter(s=>isActive(s)||valid.some(o=>o.staffId===s.id)).map(s=>{const my=valid.filter(o=>o.staffId===s.id), rev=sum(my,'amount'), vids=views.filter(v=>v.staffId===s.id);
     const all=orders.filter(o=>o.staffId===s.id);
     return {s,orders:my.length,allOrders:all.length,cancelled:all.length-my.length,rev,videos:vids.length,views:sum(vids,'views'),...payFor(s,rev)}});
   const payroll=people.reduce((t,p)=>t+p.pay,0);
@@ -520,7 +523,7 @@ function vOverview(){
   const open=D.tasks.filter(x=>x.status!=='Xong').sort((a,b)=>(a.due||'9')<(b.due||'9')?-1:1);
   const myOpen=isAdmin()?open:open.filter(x=>x.staffId===ME.id);
   const reported=new Set(D.reports.filter(r=>r.date===t).map(r=>r.staffId));
-  const missing=D.staff.filter(s=>!reported.has(s.id));
+  const missing=D.staff.filter(s=>isActive(s)&&!reported.has(s.id));
   const tile=(cls,lab,val,sub)=>`<div class="panel tile ${cls}"><div class="lab">${lab}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
   const od=myOpen.filter(x=>x.due&&x.due<t).length;
   return needStaff()+`<div class="panel clockstrip"><h2>Chấm công của tôi</h2><div>${clockBox()}</div></div><div class="grid tiles">
@@ -544,7 +547,7 @@ function vOverview(){
 }
 
 function staffFilter(col){const v=(S.f[col]||{}).staff||'';
-  return `<select id="flt-staff-${col}" data-flt="${col}" data-k="staff" aria-label="Lọc theo nhân viên"><option value="">Tất cả nhân viên</option>${D.staff.map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;}
+  return `<select id="flt-staff-${col}" data-flt="${col}" data-k="staff" aria-label="Lọc theo nhân viên"><option value="">Tất cả nhân viên</option>${staffFor(v).map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;}
 function searchBox(col,ph){return `<input type="search" id="flt-q-${col}" data-flt="${col}" data-k="q" placeholder="${ph}" value="${esc((S.f[col]||{}).q||'')}">`;}
 const match=(r,q,keys)=>!q||keys.some(k=>String(r[k]||'').toLowerCase().includes(q.toLowerCase()));
 
@@ -656,7 +659,7 @@ function pcPanel(){
       ${pc.ready&&SETTINGS&&!SETTINGS.pcAuto?'<span class="pill warn" title="Chạy hàm batTuDongCapNhat trong Apps Script một lần">Tự đồng bộ 15 phút: chưa bật</span>':''}</div>
     ${sellers.length?`<h2 style="margin-top:16px">Gán nhân viên sale</h2><p class="small muted" style="margin-top:-6px">Chọn người tương ứng với mỗi tài khoản sale trên Pancake để đơn tính đúng doanh thu, hoa hồng, KPI.</p>
       <div class="tablewrap"><table><thead><tr><th>Sale trên Pancake</th><th class="num">Số đơn</th><th>Là nhân viên</th></tr></thead><tbody>
-      ${sellers.map(x=>`<tr><td>${esc(x.name||'(không tên)')}</td><td class="num">${nf(x.count)}</td><td><select id="pcm-${esc(x.id)}" data-pcmap="${esc(x.id)}" aria-label="Nhân viên"><option value="">— Chưa gán —</option>${D.staff.map(s=>`<option value="${s.id}" ${s.id===x.staffId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td></tr>`).join('')}
+      ${sellers.map(x=>`<tr><td>${esc(x.name||'(không tên)')}</td><td class="num">${nf(x.count)}</td><td><select id="pcm-${esc(x.id)}" data-pcmap="${esc(x.id)}" aria-label="Nhân viên"><option value="">— Chưa gán —</option>${staffFor(x.staffId).map(s=>`<option value="${s.id}" ${s.id===x.staffId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td></tr>`).join('')}
       </tbody></table></div>`:''}
   </div>`;
 }
@@ -689,7 +692,7 @@ function vChannels(){
     <button class="btn" data-act="syncnow" ${D.channels.length?'':'disabled'}>Đồng bộ ngay</button></div>
   ${D.channels.length?`<div class="tablewrap"><table><thead><tr><th>Kênh</th><th class="num">Follower</th><th>Người phụ trách</th><th>Cập nhật</th><th>Trạng thái</th><th></th></tr></thead><tbody>
    ${D.channels.map(ch=>`<tr><td><span class="pill ${ch.platform==='TikTok'?'tt':'fb'}">${esc(ch.platform)}</span> <b>${esc(ch.name)}</b></td><td class="num">${nf(ch.followers)}</td>
-     <td><select id="chs-${ch.id}" data-chstaff="${ch.id}" aria-label="Người phụ trách"><option value="">— Chưa gán —</option>${D.staff.map(s=>`<option value="${s.id}" ${s.id===ch.staffId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td>
+     <td><select id="chs-${ch.id}" data-chstaff="${ch.id}" aria-label="Người phụ trách"><option value="">— Chưa gán —</option>${staffFor(ch.staffId).map(s=>`<option value="${s.id}" ${s.id===ch.staffId?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td>
      <td class="small">${ch.lastSync?new Date(ch.lastSync).toLocaleString('vi-VN'):'—'}</td>
      <td>${ch.error?`<span class="pill bad">Lỗi</span><div class="small neg" style="max-width:260px">${esc(ch.error)}</div>`:'<span class="pill good">Đang chạy</span>'}</td>
      <td><button class="btn danger" data-act="chdel" data-id="${ch.id}">Gỡ</button></td></tr>`).join('')}</tbody></table></div>
@@ -711,9 +714,9 @@ function vKpi(){
 }
 
 function vStaff(){
-  return `<div class="toolbar"><span class="muted">Mỗi người đăng nhập bằng mã PIN riêng. Quyền "Quản lý" xem được tiền, lương và sửa mọi dữ liệu.</span><span class="spacer"></span>${addBtn('staff')}</div>
+  return `<div class="toolbar"><span class="muted">Mỗi người đăng nhập bằng mã PIN riêng. Quyền "Quản lý" xem được tiền, lương và sửa mọi dữ liệu. Người nghỉ việc: bấm vào tên → Trạng thái <b>Đã nghỉ</b> (giữ lại lịch sử công, lương) hoặc bấm <b>Xóa</b> để xóa hẳn.</span><span class="spacer"></span>${addBtn('staff')}</div>
   <div class="tablewrap"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Quyền</th><th>Mã PIN</th><th class="num">Lương cứng</th><th class="num">Hoa hồng</th><th class="num">KPI đơn</th><th class="num">KPI doanh thu</th><th class="num">KPI video</th><th class="num">KPI view</th></tr></thead>
-   <tbody>${[...D.staff].sort((a,b)=>String(a.code||'~').localeCompare(String(b.code||'~'))||String(a.name||'').localeCompare(String(b.name||''),'vi')).map(s=>`<tr class="row" data-act="edit" data-col="staff" data-id="${s.id}"><td class="muted">${esc(s.code||'—')}</td><td><b>${esc(s.name)}</b>${s.id===ME.id?' <span class="pill acc">Bạn</span>':''}</td><td>${esc(s.dept||'—')}</td><td>${esc(s.role)}</td><td class="muted">${esc(s.pin)}</td><td class="num">${vnd(s.baseSalary)}</td><td class="num">${nf(s.commission||0)}%</td><td class="num">${nf(s.kpiOrders)}</td><td class="num">${short(s.kpiRevenue)}</td><td class="num">${nf(s.kpiVideos)}</td><td class="num">${short(s.kpiViews)}</td></tr>`).join('')}</tbody></table></div>`;
+   <tbody>${[...D.staff].sort((a,b)=>(isActive(b)-isActive(a))||String(a.code||'~').localeCompare(String(b.code||'~'))||String(a.name||'').localeCompare(String(b.name||''),'vi')).map(s=>`<tr class="row" data-act="edit" data-col="staff" data-id="${s.id}"${isActive(s)?'':' style="opacity:.55"'}><td class="muted">${esc(s.code||'—')}</td><td><b>${esc(s.name)}</b>${s.id===ME.id?' <span class="pill acc">Bạn</span>':''}${isActive(s)?(s.remote==='Có'?' <span class="pill">Làm ngoài</span>':''):` <span class="pill bad">Đã nghỉ${s.endDate?' '+dmy(s.endDate):''}</span>`}</td><td>${esc(s.dept||'—')}</td><td>${esc(s.role)}</td><td class="muted">${esc(s.pin)}</td><td class="num">${vnd(s.baseSalary)}</td><td class="num">${nf(s.commission||0)}%</td><td class="num">${nf(s.kpiOrders)}</td><td class="num">${short(s.kpiRevenue)}</td><td class="num">${nf(s.kpiVideos)}</td><td class="num">${short(s.kpiViews)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 
@@ -837,7 +840,7 @@ function monthSum(sid){
     earlyMin:st.reduce((t,x)=>t+(x.early||0),0),ot:Math.round(st.reduce((t,x)=>t+(+x.ot||0),0)*10)/10,
     leave:c('leave'),paidLeave:st.filter(x=>x.k==='leave'&&x.paid).length,absent:c('absent'),missingOut:st.filter(x=>x.missingOut).length};
 }
-const attStaff=()=>D.staff.filter(s=>s.role!=='Quản lý'||D.attendance.some(a=>a.staffId===s.id));
+const attStaff=()=>D.staff.filter(s=>(isActive(s)&&s.role!=='Quản lý')||D.attendance.some(a=>a.staffId===s.id&&(isActive(s)||String(a.date).startsWith(S.month))));
 function todayBoard(){
   const t=todayStr(), g={ok:[],late:[],leave:[],notyet:[],off:[],absent:[],future:[]};
   attStaff().forEach(s=>{const st=dayCalc(s.id,t);(g[st.k]||g.notyet).push({s,st});});
@@ -847,6 +850,8 @@ function todayBoard(){
     <div class="att-row"><span class="small muted">Đi muộn</span><div>${names(g.late,{cls:'warn',t:x=>' · '+esc(x.st.a.checkIn)+' (+'+x.st.late+'′)'})}</div></div>
     <div class="att-row"><span class="small muted">Nghỉ phép</span><div>${names(g.leave,{cls:'v',t:x=>' · '+esc(x.st.l.type)})}</div></div>
     <div class="att-row"><span class="small muted">Chưa vào ca</span><div>${names(g.notyet,{cls:'bad'})}</div></div>
+    ${(()=>{const rm=attStaff().filter(s=>s.remote==='Có').map(s=>({s,a:D.attendance.find(x=>x.staffId===s.id&&x.date===t)})).filter(o=>o.a&&o.a.checkIn);
+      return rm.length?`<div class="att-row"><span class="small muted">Làm ngoài</span><div>${rm.map(o=>`<span class="pill">${esc(o.s.name)} · ${esc(o.a.checkIn)}${mapLink(o.a.locIn)}${photoLink(o.a.photoIn)}${o.a.checkOut?' – '+esc(o.a.checkOut)+mapLink(o.a.locOut)+photoLink(o.a.photoOut):''}</span>`).join(' ')}</div></div>`:'';})()}
     <div class="small muted" style="margin-top:6px">Tính muộn theo ca của từng người. Xem cả tháng ở mục Nhân sự.</div>`;
 }
 function monthGrid(list){
@@ -855,7 +860,7 @@ function monthGrid(list){
   const sym=x=>x.k==='late'?'M':x.k==='leave'?'P':x.k==='absent'?'V':x.k==='notyet'?'·':(x.k==='ok')?(x.cong===0.5?'½':x.cong===0&&x.a&&x.a.checkIn?'0':'✓'):'';
   const rows=list.map(s=>{const M=monthSum(s.id);
     return `<tr><td class="g-name"><b>${esc(s.name)}</b><div class="small muted">${esc([s.dept,shiftOf(s.id).name].filter(Boolean).join(' · '))}</div></td>${M.st.map((x,i)=>{
-      const tip=(x.a&&x.a.checkIn?`${x.a.checkIn}${x.a.checkOut?' – '+x.a.checkOut:' (thiếu giờ ra)'}${x.late?' · muộn '+x.late+' phút':''}${x.early?' · về sớm '+x.early+' phút':''}${x.worked!=null?' · làm '+Math.round(x.worked/6)/10+' giờ':''} · ${x.cong} công`:x.l?x.l.type:x.k==='absent'?'Vắng không phép':x.k==='off'?'Ngày nghỉ':'')+(x.ot?' · tăng ca '+x.ot+' giờ':'')+(x.note?' · '+x.note:'');
+      const tip=(x.a&&x.a.checkIn?`${x.a.checkIn}${x.a.checkOut?' – '+x.a.checkOut:' (thiếu giờ ra)'}${x.late?' · muộn '+x.late+' phút':''}${x.early?' · về sớm '+x.early+' phút':''}${x.worked!=null?' · làm '+Math.round(x.worked/6)/10+' giờ':''} · ${x.cong} công`:x.l?x.l.type:x.k==='absent'?'Vắng không phép':x.k==='off'?'Ngày nghỉ':'')+(x.ot?' · tăng ca '+x.ot+' giờ':'')+(x.note?' · '+x.note:'')+(x.a&&(x.a.locIn||x.a.locOut)?' · có vị trí GPS (bấm để xem)':'');
       return `<td class="g g-${x.k}${x.ot?' g-ot':''}${x.missingOut?' g-miss':''}"${isAdmin()&&!LOCKED()&&x.k!=='future'?` data-act="attday" data-sid="${s.id}" data-ds="${days[i]}" style="cursor:pointer"`:''} title="${dmy(days[i])}: ${esc(tip)}">${sym(x)}</td>`;}).join('')}
       <td class="num"><b>${M.cong}</b>${M.paidLeave?`<div class="small muted">+${M.paidLeave} phép</div>`:''}</td><td class="num ${M.lateN?'neg':''}">${M.lateN}${M.lateMin?`<div class="small">${M.lateMin}′</div>`:''}</td>
       <td class="num">${M.earlyMin?M.earlyMin+'′':'0'}</td><td class="num">${M.ot||0}</td><td class="num">${M.leave}</td><td class="num ${M.absent?'neg':''}">${M.absent}</td></tr>`;}).join('');
@@ -1005,7 +1010,7 @@ function vRanking(){
   const f=S.f.ranking||{}, per=f.per||'month', t=todayStr();
   const d=new Date(); const wd=(d.getDay()+6)%7; const mon=new Date(d.getTime()-wd*86400000); const wk=mon.getFullYear()+'-'+pad(mon.getMonth()+1)+'-'+pad(mon.getDate());
   const inP=o=>per==='day'?o.date===t:per==='week'?(String(o.date)>=wk&&String(o.date)<=t):inMonth(o);
-  const rows=D.staff.map(s=>{const all=D.orders.filter(o=>o.staffId===s.id&&inP(o)), ok=all.filter(o=>o.status!=='Hoàn/Hủy');
+  const rows=D.staff.filter(s=>isActive(s)||D.orders.some(o=>o.staffId===s.id&&inP(o))).map(s=>{const all=D.orders.filter(o=>o.staffId===s.id&&inP(o)), ok=all.filter(o=>o.status!=='Hoàn/Hủy');
     return {s,rev:sum(ok,'amount'),n:ok.length,all:all.length,bad:all.length-ok.length};}).filter(r=>r.all>0).sort((a,b)=>b.rev-a.rev);
   const top=rows[0]?rows[0].rev:0;
   return `<div class="toolbar"><div class="seg">${[['day','Hôm nay'],['week','Tuần này'],['month','Tháng đang xem']].map(([k,l])=>`<button class="${per===k?'on':''}" data-flt-btn="ranking" data-k="per" data-v="${k}">${l}</button>`).join('')}</div></div>
@@ -1094,11 +1099,11 @@ function vHr(){
 }
 function clockBox(){
   const t=todayStr(), a=D.attendance.find(x=>x.staffId===ME.id&&x.date===t), sh=shiftOf(ME.id), h=HR();
-  const gps=h.gpsRequired?'<div class="small muted" style="margin-top:6px">Cần bật định vị và ở gần công ty.</div>':'';
-  if(!a||!a.checkIn) return `<p class="muted" style="margin-top:0">Chưa vào ca hôm nay. ${esc(sh.name)}: ${esc(sh.start)}–${esc(sh.end)}.</p><button class="btn primary big-btn" data-act="clockin">Vào ca</button>${gps}`;
+  const gps=isRemote()?'<div class="small muted" style="margin-top:6px">Bạn làm việc bên ngoài: mỗi lần chấm cần chụp 1 ảnh nơi làm việc, hệ thống ghi kèm vị trí (bật định vị).</div>':h.gpsRequired?'<div class="small muted" style="margin-top:6px">Cần bật định vị và ở gần công ty.</div>':'';
+  if(!a||!a.checkIn) return `<p class="muted" style="margin-top:0">Chưa vào ca hôm nay. ${esc(sh.name)}: ${esc(sh.start)}–${esc(sh.end)}.</p><button class="btn primary big-btn" data-act="clockin">${isRemote()?'📷 Chụp ảnh & Vào ca':'Vào ca'}</button>${gps}`;
   const late=Math.max(0,toMin(a.checkIn)-toMin(sh.start)-(+sh.graceMin||0));
   const src=a.source==='Máy chấm công'?' <span class="small muted">(máy chấm công)</span>':'';
-  if(!a.checkOut) return `<p style="margin-top:0">Đã vào ca lúc <b>${esc(a.checkIn)}</b>${src} ${late?`<span class="pill warn">Muộn ${late} phút</span>`:'<span class="pill good">Đúng giờ</span>'}</p><button class="btn big-btn" data-act="clockout">Tan ca</button>${gps}`;
+  if(!a.checkOut) return `<p style="margin-top:0">Đã vào ca lúc <b>${esc(a.checkIn)}</b>${src} ${late?`<span class="pill warn">Muộn ${late} phút</span>`:'<span class="pill good">Đúng giờ</span>'}</p><button class="btn big-btn" data-act="clockout">${isRemote()?'📷 Chụp ảnh & Tan ca':'Tan ca'}</button>${gps}`;
   return `<p style="margin-top:0">Hôm nay: <b>${esc(a.checkIn)} – ${esc(a.checkOut)}</b>${src} <span class="pill good">Đã xong</span></p><button class="btn" data-act="clockout">Chấm ra lại (về muộn hơn)</button><div class="small muted" style="margin-top:6px">Lỡ bấm tan ca sớm? Bấm lại lúc về, hệ thống lấy giờ ra muộn nhất.</div>`;
 }
 function getLoc(){return new Promise((res,rej)=>{
@@ -1106,12 +1111,33 @@ function getLoc(){return new Promise((res,rej)=>{
   navigator.geolocation.getCurrentPosition(p=>res({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy||0)}),
     e=>rej(new Error(e.code===1?'Bạn chưa cho phép định vị. Vào cài đặt trình duyệt, cho phép vị trí cho trang này rồi thử lại.':'Không lấy được vị trí. Ra chỗ thoáng hoặc bật GPS rồi thử lại.')),
     {enableHighAccuracy:true,timeout:12000,maximumAge:0});});}
+const photoLink=id=>id?` <button type="button" class="linkbtn small" data-act="photo" data-id="${esc(id)}">📷 ảnh</button>`:'';
+const isRemote=()=>((D.staff.find(s=>s.id===ME.id)||{}).remote==='Có');
+const mapLink=l=>l?` <a class="small" href="https://www.google.com/maps?q=${encodeURIComponent(String(l).split(',').slice(0,2).join(','))}" target="_blank" rel="noopener">📍 vị trí</a>`:'';
+/* Chụp ảnh bằng camera điện thoại, đóng dấu giờ + tên, nén nhỏ */
+function takePhoto(){return new Promise((res,rej)=>{
+  let inp=document.getElementById('cam-in');
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.id='cam-in';inp.hidden=true;document.body.appendChild(inp);}
+  inp.value='';
+  inp.onchange=()=>{const f=inp.files&&inp.files[0];if(!f)return rej(new Error('Chưa chụp ảnh.'));
+    const img=new Image(),u=URL.createObjectURL(f);
+    img.onload=()=>{const k=Math.min(1,1280/Math.max(img.width,img.height)),w=Math.round(img.width*k),h=Math.round(img.height*k);
+      const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.drawImage(img,0,0,w,h);
+      const d=new Date(),txt=`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())} · ${ME.name}`;
+      const fs=Math.max(16,Math.round(w/32));g.font=`600 ${fs}px sans-serif`;g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,h-fs*1.9,w,fs*1.9);
+      g.fillStyle='#fff';g.fillText(txt,fs*.6,h-fs*.6);URL.revokeObjectURL(u);res(c.toDataURL('image/jpeg',0.72));};
+    img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('Không đọc được ảnh, chụp lại giúp.'));};img.src=u;};
+  inp.oncancel=()=>rej(new Error('Chưa chụp ảnh.'));
+  inp.click();});}
 async function clockAct(btn,fn,ok){
-  let loc=null;
-  if(HR().gpsRequired){const old=btn.textContent;btn.disabled=true;btn.textContent='Đang lấy vị trí…';
+  let loc=null, photo=null;
+  if(isRemote()){const old=btn.textContent;
+    try{const pp=takePhoto();btn.disabled=true;btn.textContent='Đang chờ ảnh…';photo=await pp;}catch(err){toast(msg(err));btn.disabled=false;btn.textContent=old;return;}
+    btn.disabled=false;btn.textContent=old;}
+  if(HR().gpsRequired||isRemote()){const old=btn.textContent;btn.disabled=true;btn.textContent='Đang lấy vị trí…';
     try{loc=await getLoc();}catch(err){toast(msg(err));btn.disabled=false;btn.textContent=old;return;}
     btn.disabled=false;btn.textContent=old;}
-  await act_(btn,fn,[loc],ok);
+  await act_(btn,fn,[loc,photo],ok);
 }
 
 
@@ -1205,7 +1231,7 @@ function blockPanel(){
   return `<div class="panel" style="margin-top:20px"><div class="toolbar" style="margin-bottom:6px"><h2 style="margin:0">Nhập từ máy chấm công</h2><span class="muted small">${esc(IMP.file)}</span><span class="spacer"></span><button class="btn" data-act="impcancel">Hủy</button></div>
     <div class="notice" style="background:var(--good-soft);color:var(--good)">Nhận dạng: bảng chi tiết chấm công Wise Eye · ${ids.length} nhân viên · ${nf(IMP.recs.length)} dòng ngày · tháng ${months.join(', ')} · ngày ghi kiểu ${IMP.dayFirst?'ngày/tháng':'tháng/ngày'}</div>
     <h2>Gán mã trên máy với nhân viên</h2><div class="tablewrap"><table><thead><tr><th>Mã trên máy</th><th>Tên trên máy</th><th class="num">Số ngày</th><th>Là nhân viên</th></tr></thead><tbody>
-    ${ids.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td>${esc(x.name)}</td><td class="num">${nf(x.n)}</td><td><select id="impm-${esc(x.id)}" data-impmap="${esc(x.id)}" aria-label="Nhân viên"><option value="">— Bỏ qua —</option>${D.staff.map(s=>`<option value="${s.id}" ${IMP.map[x.id]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
+    ${ids.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td>${esc(x.name)}</td><td class="num">${nf(x.n)}</td><td><select id="impm-${esc(x.id)}" data-impmap="${esc(x.id)}" aria-label="Nhân viên"><option value="">— Bỏ qua —</option>${staffFor(IMP.map[x.id]).map(s=>`<option value="${s.id}" ${IMP.map[x.id]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
     ${notes.length?`<h2 style="margin-top:14px">Các ghi chú trong file</h2><p class="small muted" style="margin-top:-6px">Ngày chỉ có ghi chú, không có giờ quẹt, thì tính thế nào?</p><div class="tablewrap"><table><thead><tr><th>Ghi chú</th><th>Cách tính</th></tr></thead><tbody>
       ${notes.map(k=>`<tr><td><b>${esc(k)}</b></td><td><select data-impnote="${esc(k)}" aria-label="Cách tính"><option value="work" ${IMP.noteMap[k]==='work'?'selected':''}>Tính có công (đi làm nơi khác…)</option><option value="off" ${IMP.noteMap[k]==='off'?'selected':''}>Ngày nghỉ, không tính vắng</option><option value="skip" ${IMP.noteMap[k]==='skip'?'selected':''}>Bỏ qua</option></select></td></tr>`).join('')}</tbody></table></div>`:''}
     <div class="toolbar" style="margin:14px 0 0"><button class="btn primary" data-act="impgo" ${r.recs.length?'':'disabled'}>Nhập ${nf(r.recs.length)} ngày công</button>
@@ -1257,7 +1283,7 @@ function impPanel(){
       <div class="fld"><label for="imp-date">Hoặc cột ngày riêng / cột giờ riêng</label><div style="display:flex;gap:6px"><select id="imp-date" data-imp="date">${opts(IMP.cols.date)}</select><select id="imp-time" data-imp="time">${opts(IMP.cols.time)}</select></div></div>
     </div>
     ${ids.length?`<h2 style="margin-top:14px">Gán mã trên máy với nhân viên</h2><div class="tablewrap"><table><thead><tr><th>Mã trên máy</th><th>Tên trên máy</th><th class="num">Số lần quẹt</th><th>Là nhân viên</th></tr></thead><tbody>
-      ${ids.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td>${esc(x.name)}</td><td class="num">${nf(x.n)}</td><td><select id="impm-${esc(x.id)}" data-impmap="${esc(x.id)}" aria-label="Nhân viên"><option value="">— Bỏ qua —</option>${D.staff.map(s=>`<option value="${s.id}" ${IMP.map[x.id]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:'<div class="notice" style="margin-top:12px">Chọn cột mã nhân viên để tiếp tục.</div>'}
+      ${ids.map(x=>`<tr><td><b>${esc(x.id)}</b></td><td>${esc(x.name)}</td><td class="num">${nf(x.n)}</td><td><select id="impm-${esc(x.id)}" data-impmap="${esc(x.id)}" aria-label="Nhân viên"><option value="">— Bỏ qua —</option>${staffFor(IMP.map[x.id]).map(s=>`<option value="${s.id}" ${IMP.map[x.id]===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:'<div class="notice" style="margin-top:12px">Chọn cột mã nhân viên để tiếp tục.</div>'}
     <div class="toolbar" style="margin:14px 0 0"><button class="btn primary" data-act="impgo" ${r.recs.length?'':'disabled'}>Nhập ${nf(r.recs.length)} ngày công</button>
       <span class="small muted">${nf(r.days)} lượt người-ngày đọc được${r.unmapped?` · ${nf(r.unmapped)} chưa gán nhân viên (sẽ bỏ qua)`:''}${r.bad?` · <span class="neg">${nf(r.bad)} dòng không đọc được ngày giờ</span>`:''}</span></div>
     <div class="small muted" style="margin-top:6px">Ngày đã có công sẽ được ghi đè bằng dữ liệu máy. Cách gán mã được nhớ cho lần nhập sau.</div></div>`;
@@ -1276,8 +1302,8 @@ function attSyncPanel(){
     ${ATTTOKEN?`<div class="notice" style="background:var(--accent-soft);color:var(--accent)">Mã đồng bộ (chỉ hiện một lần, dán vào file <b>caidat.txt</b> của chương trình):<div class="copyrow" style="margin-top:6px"><code id="atttok">${esc(ATTTOKEN)}</code><button class="btn" data-act="copytok">Chép</button></div></div>`:''}
     ${a.hasToken&&ATTTOKEN===''&&!last?'<p class="small muted">Mã đã tạo. Nếu quên mã, bấm "Tạo mã mới" rồi dán lại vào chương trình.</p>':''}
     ${a.users.length?`<div class="toolbar" style="margin:12px 0 6px"><h2 style="margin:0">Gán mã vân tay với nhân viên</h2><span class="spacer"></span>${a.users.some(u=>!u.staffId)?`<button class="btn primary" data-act="mkstaff">Tạo nhân viên cho ${a.users.filter(u=>!u.staffId).length} mã chưa gán</button>`:''}</div>
-      <p class="small muted" style="margin-top:0">Ai đã có trên web thì chọn tên ở cột cuối. Ai chưa có (nhân sự cũ chưa nhập) thì bấm nút trên để web tự tạo theo tên trên máy, mỗi người một mã PIN riêng (xem ở mục Nhân viên). Sau đó vào mục Nhân viên sửa lại họ tên có dấu, phòng ban.</p><div class="tablewrap"><table><thead><tr><th>Mã trên máy</th><th>Tên trên máy</th><th>Là nhân viên</th></tr></thead><tbody>
-      ${a.users.map(u=>`<tr><td><b>${esc(u.uid)}</b></td><td>${esc(u.name)}</td><td><select id="am-${esc(u.uid)}" data-attmap="${esc(u.uid)}" aria-label="Nhân viên"><option value="">— Chưa gán —</option>${D.staff.map(x=>`<option value="${x.id}" ${x.id===u.staffId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted" style="margin-top:0">Ai đã có trên web thì chọn tên ở cột cuối. Mã của người đã nghỉ hoặc mã thử thì chọn <b>Bỏ qua</b> (web sẽ không tạo và không tính công). Ai chưa có (nhân sự cũ chưa nhập) thì bấm nút trên để web tự tạo theo tên trên máy, mỗi người một mã PIN riêng (xem ở mục Nhân viên). Sau đó vào mục Nhân viên sửa lại họ tên có dấu, phòng ban.</p><div class="tablewrap"><table><thead><tr><th>Mã trên máy</th><th>Tên trên máy</th><th>Là nhân viên</th></tr></thead><tbody>
+      ${a.users.map(u=>`<tr><td><b>${esc(u.uid)}</b></td><td>${esc(u.name)}</td><td><select id="am-${esc(u.uid)}" data-attmap="${esc(u.uid)}" aria-label="Nhân viên"><option value="">— Chưa gán —</option><option value="-" ${u.staffId==='-'?'selected':''}>— Bỏ qua (đã nghỉ / không dùng) —</option>${staffFor(u.staffId).map(x=>`<option value="${x.id}" ${x.id===u.staffId?'selected':''}>${esc(x.name)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>
       <div class="small muted" style="margin-top:6px">Mã chưa gán thì lượt quẹt được giữ lại, gán xong sẽ tự đưa vào bảng công.</div>`:''}
   </div>`;
 }
@@ -1372,7 +1398,7 @@ function openForm(col,id,preset){
   document.getElementById('form-title').textContent=(rec?(can?'Sửa ':'Xem '):'Thêm ')+NAMES[col];
   const wrap=document.getElementById('form-fields');
   wrap.innerHTML=FIELDS[col].map(f=>{
-    let v=rec?rec[f.k]:(f.d!=null?f.d:f.t==='month'?S.month:f.t==='date'?(['publishDate','nextDate','startDate','birthday'].includes(f.k)?'':todayStr()):f.t==='sel'?f.o[0]:'');
+    let v=rec?rec[f.k]:(f.d!=null?f.d:f.t==='month'?S.month:f.t==='date'?(['publishDate','nextDate','startDate','birthday','endDate'].includes(f.k)?'':todayStr()):f.t==='sel'?f.o[0]:'');
     if(!rec&&f.t==='staff'&&col!=='expenses'){const fs=(S.f[col]||{}).staff;v=fs||ME.id;}
     if(!rec&&col==='staff'&&f.k==='code')v=nextCode();
     if(!rec&&preset&&preset[f.k]!=null)v=preset[f.k];
@@ -1382,10 +1408,12 @@ function openForm(col,id,preset){
     let inp;
     if(f.t==='area') inp=`<textarea id="${id}" name="${f.k}"${ro}>${esc(v)}</textarea>`;
     else if(f.t==='sel'){const opts=v&&!f.o.includes(v)?[...f.o,v]:f.o; inp=`<select id="${id}" name="${f.k}"${ro}>${f.blank?`<option value="">${f.blank}</option>`:''}${opts.map(o=>`<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}</select>`;}
+    else if(f.t==='photo') inp=`<input type="hidden" name="${f.k}" value="${esc(v)}">${v?`<button type="button" class="btn" data-act="photo" data-id="${esc(v)}">📷 Xem ảnh</button>`:'<span class="muted small">Không có ảnh</span>'}`;
     else if(f.t==='shift') inp=`<select id="${id}" name="${f.k}"${ro}><option value="">Ca chung (giờ mặc định)</option>${(D.shifts||[]).map(x=>`<option value="${x.id}" ${x.id===v?'selected':''}>${esc(x.name)} · ${esc(x.start)}–${esc(x.end)}</option>`).join('')}</select>`;
-    else if(f.t==='staff') inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn —</option>${D.staff.map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
+    else if(f.t==='staff') inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn —</option>${staffFor(v).map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
     else inp=`<input id="${id}" name="${f.k}" type="${f.t==='num'?'number':f.t}" ${f.t==='num'?`inputmode="decimal" min="0" step="${f.step||'any'}"`:''}${f.k==='pin'?' inputmode="numeric" autocomplete="off"':''} value="${esc(v===0&&!rec&&f.t==='num'?'':v)}" ${f.ph?`placeholder="${f.ph}"`:''}${ro}>`;
-    return `<div class="fld ${f.wide?'wide':''}" data-k="${f.k}">${lab}${inp}</div>`}).join('');
+    const mp=f.map&&v?`<a class="small" href="https://www.google.com/maps?q=${encodeURIComponent(String(v).split(',').slice(0,2).join(','))}" target="_blank" rel="noopener">📍 Xem trên bản đồ</a>`:'';
+    return `<div class="fld ${f.wide?'wide':''}" data-k="${f.k}">${lab}${inp}${mp}</div>`}).join('');
   if(col==='leaves'){const ty=document.getElementById('f_type');reqShape();ty&&ty.addEventListener('change',reqShape);}
   const del=document.getElementById('form-del'); del.hidden=!rec||!can; del.classList.remove('armed'); del.textContent='Xóa';
   document.getElementById('form-save').hidden=!can;
@@ -1477,6 +1505,8 @@ document.addEventListener('click',async e=>{
   else if(act==='mkstaff'){if(a.dataset.sure!=='1'){a.dataset.sure='1';a.textContent='Bấm lần nữa để tạo';return;}
     a.disabled=true;a.textContent='Đang tạo…';try{const r=await run('createStaffFromMachine',PIN,[]);apply(r);toast('Đã tạo '+(r.created||0)+' nhân viên. Xem mã PIN ở mục Nhân viên');}catch(err){toast(msg(err));a.disabled=false;a.textContent='Thử lại';}}
   else if(act==='attday'){const r=D.attendance.find(x=>x.staffId===a.dataset.sid&&x.date===a.dataset.ds);r?openForm('attendance',r.id):openForm('attendance',null,{date:a.dataset.ds,staffId:a.dataset.sid});}
+  else if(act==='photo'){const ov=document.createElement('div');ov.className='photo-ov';ov.innerHTML='<div class="muted">Đang tải ảnh…</div>';ov.onclick=()=>ov.remove();document.body.appendChild(ov);
+    try{const src=await run('getPhoto',PIN,a.dataset.id);ov.innerHTML=`<img src="${src}" alt="Ảnh chấm công"><div class="small" style="color:#fff;margin-top:8px">Bấm bất kỳ đâu để đóng</div>`;}catch(err){ov.remove();toast(msg(err));}}
   else if(act==='copytok'){const t=document.getElementById('atttok').textContent;try{await navigator.clipboard.writeText(t);toast('Đã chép mã');}catch(_){toast('Bôi đen mã rồi bấm Ctrl+C');}}
   else if(act==='impcancel'){IMP=null;render();}
   else if(act==='impgo'){const r=impRecords();if(!r.recs.length)return;a.disabled=true;a.textContent='Đang nhập…';
