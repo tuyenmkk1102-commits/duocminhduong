@@ -100,6 +100,15 @@ button.pill{border:0;cursor:pointer}
 .card.overdue{border-left:3px solid var(--bad)}
 .report{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;cursor:pointer}
 .report:hover{border-color:var(--muted)}
+.rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-top:14px}
+.rp-card{padding:14px 16px}.rp-card.has-issue{border-color:var(--bad);box-shadow:inset 3px 0 0 var(--bad)}
+.rp-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.rp-head>div{min-width:0}.rp-head .btn{padding:6px 12px}.rp-head .spacer{flex:1}
+.rp-av{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-weight:700}
+.rp-sec{border-top:1px dashed var(--line);padding-top:8px;margin-top:8px}.rp-head+.rp-sec{border-top:0;margin-top:0;padding-top:0}
+.rp-lab{font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;display:flex;gap:6px;align-items:center}
+.rp-txt{white-space:pre-wrap;line-height:1.5}.rp-issue .rp-lab,.rp-issue .rp-txt{color:var(--bad)}
+.rp-auto{display:flex;gap:8px;align-items:flex-start;margin-top:4px}.rp-auto ul{margin:0;padding-left:16px}.rp-auto .tag{flex:0 0 auto}
+.rp-tasks{list-style:none;margin:0;padding:0;display:grid;gap:6px}.rp-tasks li{display:flex;gap:8px}.rp-tasks .ok{color:var(--good,#2B7A3E);font-weight:700}
 .report .head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
 .report dl{display:grid;grid-template-columns:110px minmax(0,1fr);gap:4px 12px;margin:0}
 .report dt{color:var(--muted);font-size:12px;font-weight:600;padding-top:1px}
@@ -241,7 +250,10 @@ td.g-ot{box-shadow:inset 0 -3px 0 var(--views)} td.g-miss{box-shadow:inset 0 0 0
 .photo-ov{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}.photo-ov img{max-width:100%;max-height:85vh;border-radius:8px}.photo-ov .muted{color:#ddd}.linkbtn{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit;text-decoration:underline}
 .navlist{display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;min-height:0}
 .navsec{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px;opacity:.85}
-nav.side button.sub{padding-left:22px;font-size:13.5px}
+nav.side button.navsec{display:flex;justify-content:flex-start;padding:12px 10px 4px;font-size:10.5px;font-weight:700;width:100%;cursor:pointer;font-family:inherit}
+nav.side button.navsec:hover{opacity:1;color:var(--ink);background:none}
+nav.side .car{margin-left:auto;padding-left:6px;font-size:11px;color:var(--muted)}
+nav.side button.sub{padding-left:26px;font-size:13px;border-left:2px solid var(--line);margin-left:12px;border-radius:0 8px 8px 0}
 .topright{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .period{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .period select{height:38px}
@@ -266,7 +278,7 @@ nav.side button.sub{padding-left:22px;font-size:13.5px}
 .cal .d .n{display:flex;justify-content:space-between;font-weight:700;margin-bottom:3px}.cal .it{display:block;width:100%;text-align:left;border:0;border-radius:4px;padding:2px 4px;margin-bottom:2px;background:var(--accent-soft);color:var(--accent);font-size:11.5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cal .it.done{background:var(--good-soft);color:var(--good);text-decoration:line-through}.cal .it.late{background:var(--bad-soft);color:var(--bad)}
 .calh{text-align:center;font-size:11px;font-weight:700;color:var(--muted)}
 @media (max-width:900px){.cards3{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:760px){.cards3{grid-template-columns:1fr}.navsec{display:none}nav.side button.sub{padding-left:10px}.navlist{flex-direction:row;overflow:visible}.qsearch input{width:130px}.cal .d{min-height:64px}}
+@media (max-width:760px){.cards3{grid-template-columns:1fr}.navsec,nav.side button.navsec{display:none}nav.side button.sub{margin-left:0;border-left:0}nav.side button.sub{padding-left:10px}.navlist{flex-direction:row;overflow:visible}.qsearch input{width:130px}.cal .d{min-height:64px}}
 </style>
 </head>
 <body>
@@ -465,9 +477,9 @@ const FIELDS={
     {k:'contract',l:'Loại hợp đồng',t:'sel',o:['Thử việc','Chính thức','Cộng tác viên']},{k:'bank',l:'Ngân hàng',t:'text'},{k:'bankAccount',l:'Số tài khoản',t:'text'},
     {k:'note',l:'Ghi chú hồ sơ',t:'area',wide:1}],
   tasks:[{k:'title',l:'Việc cần làm',t:'text',req:1,wide:1},{k:'staffId',l:'Người phụ trách',t:'staff'},{k:'due',l:'Hạn',t:'date'},
-    {k:'priority',l:'Ưu tiên',t:'sel',o:PRIORITY,d:'Trung bình'},{k:'status',l:'Trạng thái',t:'sel',o:TASK_STATUS},{k:'note',l:'Ghi chú / yêu cầu',t:'area',wide:1},{k:'report',l:'Báo cáo kết quả (người làm ghi)',t:'area',wide:1}],
+    {k:'priority',l:'Ưu tiên',t:'sel',o:PRIORITY,d:'Trung bình'},{k:'status',l:'Trạng thái',t:'sel',o:TASK_STATUS},{k:'note',l:'Ghi chú / yêu cầu',t:'area',wide:1},{k:'report',l:'Báo cáo kết quả (người làm ghi)',t:'area',wide:1},{k:'link',l:'Link kết quả (video, bài viết, file Drive…)',t:'text',wide:1,ph:'https://…'},{k:'reviewNote',l:'Nhận xét của quản lý',t:'area',wide:1,adminOnly:1}],
   reports:[{k:'date',l:'Ngày',t:'date',req:1},{k:'staffId',l:'Người báo cáo',t:'staff',req:1},
-    {k:'done',l:'Hôm nay đã làm',t:'area',req:1,wide:1},{k:'plan',l:'Ngày mai sẽ làm',t:'area',wide:1},{k:'issue',l:'Vướng mắc / cần hỗ trợ',t:'area',wide:1}],
+    {k:'plan',l:'Ngày mai sẽ làm',t:'area',wide:1},{k:'issue',l:'Vướng mắc / cần hỗ trợ',t:'area',wide:1},{k:'done',l:'Việc khác đã làm (ngoài các việc hệ thống đã tự ghi ở trên)',t:'area',wide:1}],
   orders:[{k:'date',l:'Ngày',t:'date',req:1},{k:'code',l:'Mã đơn',t:'text'},{k:'customer',l:'Khách hàng',t:'text'},{k:'phone',l:'Số điện thoại',t:'text'},
     {k:'product',l:'Sản phẩm',t:'text'},{k:'qty',l:'Số lượng',t:'num',d:1},{k:'amount',l:'Thành tiền (₫)',t:'num',req:1},
     {k:'channel',l:'Kênh bán',t:'sel',o:CHANNELS},{k:'status',l:'Trạng thái',t:'sel',o:ORDER_STATUS},{k:'staffId',l:'Nhân viên chốt',t:'staff'},{k:'note',l:'Ghi chú',t:'area',wide:1}],
@@ -618,14 +630,87 @@ function vTasks(){
   ${D.tasks.length?`<div class="board">${TASK_STATUS.map(col).join('')}</div>`:emptyBox('Chưa có công việc','Giao việc cho từng người, đặt hạn và theo dõi tiến độ tại đây.',addBtn('tasks','Giao việc đầu tiên'))}`;
 }
 
+/* Ngày hoàn thành của việc được giao (doneAt; bản cũ chưa có thì lấy ngày cập nhật cuối) */
+const doneDay=x=>x&&x.status==='Xong'?String(x.doneAt||x.updatedAt||'').slice(0,10):'';
+const tasksDoneOn=(sid,d)=>D.tasks.filter(x=>x.staffId===sid&&doneDay(x)===d);
+function rpTasks(ts){return ts.length?`<ul class="rp-tasks">${ts.map(x=>`<li><span class="ok">✓</span><div><b>${esc(x.title)}</b> ${x.review&&x.review!=='Đã duyệt'?revPill(x):''}${x.createdBy&&x.createdBy!==x.staffId?` <span class="small muted">· giao bởi ${esc(staffName(x.createdBy))}</span>`:''}${x.report?`<div class="small">${esc(x.report)}</div>`:''}${x.link?`<div class="small">${linkA(x.link)}</div>`:''}</div></li>`).join('')}</ul>`:'';}
+/* Mọi việc hệ thống đã tự ghi cho 1 người trong 1 ngày: checklist, Media, Ads, web, order nội bộ */
+function autoItems(sid,d){const L=[];
+  const cl=(D.clog||[]).filter(l=>l.staffId===sid&&l.date===d&&+l.qty>0);
+  if(cl.length)L.push(['Checklist',cl.map(l=>{const it=(D.cltpl||[]).find(i=>i.id===l.itemId);return `${it?it.name:'Đầu việc'} × ${nf(l.qty)}`;})]);
+  const wl=(D.worklog||[]).filter(w=>w.staffId===sid&&w.date===d);
+  if(wl.length)L.push(['Công việc Media',wl.map(w=>`${w.task}${+w.qty?` · ${nf(w.qty)} video`:''} · ${w.progress||''}${w.link?' 🔗':''}`)]);
+  const ad=(D.adsrep||[]).filter(r=>r.staffId===sid&&r.date===d);
+  if(ad.length)L.push(['Ads Facebook',ad.map(r=>`${r.kind||'Chiến dịch'}: chi ${short(r.spend)} · doanh thu ${short(r.revenue)} · ${nf(r.orders)} đơn · ROAS ${roasTxt(+r.revenue||0,+r.spend||0)}`)]);
+  const wb=(D.webrep||[]).filter(r=>r.staffId===sid&&r.date===d);
+  if(wb.length)L.push(['Website',wb.map(r=>`${nf(r.visits)} lượt truy cập · ${nf(r.newPosts)} bài SEO mới`)]);
+  const rq=(D.reqs||[]).filter(r=>r.assignee===sid&&r.status==='Hoàn thành'&&String(r.doneAt||r.updatedAt||'').slice(0,10)===d);
+  if(rq.length)L.push(['Order nội bộ đã xong',rq.map(r=>`${r.title} (cho ${staffName(r.createdBy)})`)]);
+  return L;}
+function rpAuto(L){return L.length?`<div class="rp-sec"><div class="rp-lab">Hệ thống tự ghi</div>${L.map(([g,xs])=>`<div class="rp-auto"><span class="tag">${esc(g)}</span><ul>${xs.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`:'';}
+function rpBlock(r,ts,au){
+  return `${ts.length?`<div class="rp-sec"><div class="rp-lab">Việc được giao đã hoàn thành <span class="pill good">${ts.length}</span></div>${rpTasks(ts)}</div>`:''}${rpAuto(au||[])}
+    ${r&&r.done?`<div class="rp-sec"><div class="rp-lab">Việc khác đã làm</div><div class="rp-txt">${esc(r.done)}</div></div>`:''}
+    ${r&&r.plan?`<div class="rp-sec"><div class="rp-lab">Ngày mai</div><div class="rp-txt">${esc(r.plan)}</div></div>`:''}
+    ${r&&r.issue?`<div class="rp-sec rp-issue"><div class="rp-lab">Vướng mắc / cần hỗ trợ</div><div class="rp-txt">${esc(r.issue)}</div></div>`:''}
+    ${!r&&!ts.length&&!(au||[]).length?'<div class="muted small">Không có dữ liệu.</div>':''}`;}
+/* Giờ chốt nộp báo cáo */
+const rpDeadline=()=>HR().reportDeadline||'17:30';
+const nowHM=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes());};
+function rpLate(r){if(!r||!r.createdAt)return '';const c=new Date(r.createdAt);if(isNaN(c))return '';const ds=c.getFullYear()+'-'+pad(c.getMonth()+1)+'-'+pad(c.getDate()),hm=pad(c.getHours())+':'+pad(c.getMinutes());
+  return ds>r.date||(ds===r.date&&hm>rpDeadline())?(ds===r.date?hm:dmy(ds)+' '+hm):'';}
+const rpPill=r=>{if(!r)return '<span class="pill bad">Chưa nộp</span>';const l=rpLate(r);return l?`<span class="pill warn">Nộp muộn ${esc(l)}</span>`:'<span class="pill good">Đúng giờ</span>';};
+function workDay(sid,d){const st=dayCalc(sid,d);return !['off','leave','future'].includes(st.k);}
+function myReportDue(){if(!ME||isAdmin())return false;const t=todayStr();if(nowHM()<rpDeadline()||!workDay(ME.id,t))return false;return !D.reports.some(r=>r.staffId===ME.id&&r.date===t);}
+/* Tổng kết kỳ: tỉ lệ nộp báo cáo + việc được giao từng người */
+function rpSummary(){
+  const p=PER(),t=todayStr(),to=p.to<t?p.to:t,days=[];for(let d=p.from;d<=to;d=addDays(d,1))days.push(d);
+  const people=D.staff.filter(s=>isActive(s)&&s.role!=='Quản lý');
+  const rows=people.map(s=>{const wd=days.filter(d=>workDay(s.id,d)&&(d<t||nowHM()>=rpDeadline())),rs=D.reports.filter(r=>r.staffId===s.id&&wd.includes(r.date));
+    const late=rs.filter(rpLate).length,tk=D.tasks.filter(x=>isAssigned(x)&&x.staffId===s.id&&((x.due&&x.due>=p.from&&x.due<=p.to)||(doneDay(x)>=p.from&&doneDay(x)<=p.to)));
+    const done=tk.filter(x=>x.status==='Xong'),ontime=done.filter(x=>!x.due||doneDay(x)<=x.due).length,od=tk.filter(x=>x.status!=='Xong'&&x.due&&x.due<t).length;
+    return {s,need:wd.length,sent:rs.length,late,rate:wd.length?Math.round(rs.length/wd.length*100):null,tk:tk.length,done:done.length,ontime,od,rev:done.filter(x=>x.review==='Chờ duyệt').length,redo:tk.filter(x=>x.review==='Làm lại'||(x.reviewNote&&x.review!=='Đã duyệt')).length};})
+    .sort((a,b)=>(b.rate??-1)-(a.rate??-1)||b.done-a.done);
+  const bar=v=>v==null?'—':`<div style="display:flex;align-items:center;gap:8px"><div class="prog ${v>=90?'good':v>=70?'':'bad'}" style="flex:1;min-width:70px"><span style="width:${v}%"></span></div><b>${v}%</b></div>`;
+  return `${tabs('rpm',[['day','Theo ngày'],['person','Theo nhân sự'],['sum','Tổng kết']],'day')}
+  <div class="toolbar"><span class="muted">Từ ${fullDmy(p.from)} đến ${fullDmy(to)} · chỉ tính ngày đi làm (trừ ngày nghỉ, nghỉ phép) · giờ chốt ${esc(rpDeadline())}</span><span class="spacer"></span>${perHint()}</div>
+  <div class="tablewrap"><table><thead><tr><th style="min-width:150px">Nhân sự</th><th class="num">Ngày cần nộp</th><th class="num">Đã nộp</th><th class="num">Nộp muộn</th><th style="min-width:150px">Tỉ lệ nộp</th><th class="num">Việc được giao</th><th class="num">Đã xong</th><th class="num">Đúng hạn</th><th class="num">Quá hạn</th><th class="num">Chờ duyệt</th><th class="num">Bị làm lại</th></tr></thead><tbody>
+  ${rows.map(o=>`<tr><td><b>${esc(o.s.name)}</b><div class="small muted">${esc(o.s.team||o.s.dept||'')}</div></td><td class="num">${o.need}</td><td class="num">${o.sent}</td><td class="num ${o.late?'neg':''}">${o.late}</td><td>${bar(o.rate)}</td>
+    <td class="num">${o.tk}</td><td class="num">${o.done}</td><td class="num">${o.done?Math.round(o.ontime/o.done*100)+'%':'—'}</td><td class="num ${o.od?'neg':''}">${o.od}</td><td class="num">${o.rev||'—'}</td><td class="num ${o.redo?'neg':''}">${o.redo||'—'}</td></tr>`).join('')}</tbody></table></div>
+  <div class="small muted" style="margin-top:6px">Đổi kỳ (tháng, tuần, khoảng ngày) ở ô chọn kỳ phía trên. Bấm "Theo nhân sự" để xem chi tiết từng ngày của một người.</div>`;
+}
 function vReports(){
-  const f=S.f.reports||{};
-  const rows=D.reports.filter(inMonth).filter(r=>!f.staff||r.staffId===f.staff).sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:0);
-  return `<div class="toolbar">${staffFilter('reports')}<span class="spacer"></span>${addBtn('reports','Viết báo cáo hôm nay')}</div>
-  ${rows.length?`<div class="list">${rows.map(r=>`<div class="report" data-act="edit" data-col="reports" data-id="${r.id}">
-    <div class="head"><b>${esc(staffName(r.staffId))}</b><span class="muted">${dmy(r.date)}/${String(r.date).slice(0,4)}</span></div>
-    <dl><dt>Đã làm</dt><dd>${esc(r.done)}</dd>${r.plan?`<dt>Ngày mai</dt><dd>${esc(r.plan)}</dd>`:''}${r.issue?`<dt>Vướng mắc</dt><dd class="neg">${esc(r.issue)}</dd>`:''}</dl></div>`).join('')}</div>`
-  :emptyBox('Chưa có báo cáo trong tháng này','Mỗi người nộp một báo cáo cuối ngày: đã làm gì, mai làm gì, vướng ở đâu.',addBtn('reports','Viết báo cáo'))}`;
+  const admin=isAdmin(), mode=admin?tabVal('rpm','day'):'me';
+  const myBtn=`<button class="btn primary" data-act="rpadd">+ Viết báo cáo hôm nay</button>`;
+  const note=`<div class="small muted" style="margin-top:4px">Việc quản lý giao, khi bấm <b>Hoàn thành</b> sẽ tự vào báo cáo của ngày đó, không cần viết lại.</div>`;
+  /* ----- nhân viên: báo cáo của tôi theo kỳ ----- */
+  if(mode==='me'||mode==='person'){
+    const sid=mode==='me'?ME.id:((S.f.reports||{}).staff||(D.staff.find(isActive)||{}).id), p=PER();
+    const days=new Set([...D.reports.filter(r=>r.staffId===sid&&inPer(r,p)).map(r=>r.date),...D.tasks.filter(x=>x.staffId===sid&&doneDay(x)&&doneDay(x)>=p.from&&doneDay(x)<=p.to).map(doneDay),
+      ...[...(D.clog||[]),...(D.worklog||[]),...(D.adsrep||[]),...(D.webrep||[])].filter(r=>r.staffId===sid&&inPer(r,p)).map(r=>r.date)]);
+    const list=[...days].sort().reverse(), wd=['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+    const due=mode==='me'&&myReportDue()?`<div class="notice warnbox" style="margin-bottom:12px">Đã quá giờ chốt ${esc(rpDeadline())} mà bạn chưa nộp báo cáo hôm nay. Bấm <b>Viết báo cáo hôm nay</b>, chỉ cần ghi ngày mai làm gì và vướng mắc.</div>`:'';
+    const head=due+(admin?`${tabs('rpm',[['day','Theo ngày'],['person','Theo nhân sự'],['sum','Tổng kết']],'day')}<div class="toolbar">${staffFilter('reports')}<span class="spacer"></span>${perHint()}</div>`
+      :`<div class="toolbar"><div><b>Báo cáo của tôi</b>${note}</div><span class="spacer"></span>${perHint()}${myBtn}</div>`);
+    return head+(list.length?`<div class="list">${list.map(d=>{const r=D.reports.find(x=>x.staffId===sid&&x.date===d),ts=tasksDoneOn(sid,d);
+      return `<div class="panel rp-card"><div class="rp-head"><b>${wd[new Date(d+'T00:00:00').getDay()]}</b><span class="muted">${fullDmy(d)}</span><span class="spacer"></span>${rpPill(r)}${r&&canEdit('reports',r)?`<button class="btn" data-act="edit" data-col="reports" data-id="${r.id}">Sửa</button>`:''}</div>${rpBlock(r,ts,autoItems(sid,d))}</div>`;}).join('')}</div>`
+      :emptyBox('Chưa có báo cáo trong kỳ này','Cuối ngày ghi lại đã làm gì, mai làm gì, vướng ở đâu. Việc được giao bấm Hoàn thành sẽ tự vào đây.',admin?'':myBtn));
+  }
+  /* ----- quản lý: bảng theo ngày ----- */
+  if(mode==='sum') return rpSummary();
+  const d=S.f.rpd||todayStr(), people=D.staff.filter(s=>isActive(s)&&s.id!==ME.id&&s.role!=='Quản lý');
+  const rows=people.map(s=>({s,r:D.reports.find(x=>x.staffId===s.id&&x.date===d),ts:tasksDoneOn(s.id,d),au:autoItems(s.id,d)}));
+  const got=rows.filter(o=>o.r||o.ts.length||o.au.length), miss=rows.filter(o=>!o.r&&workDay(o.s.id,d)), iss=got.filter(o=>o.r&&o.r.issue);
+  const sent=rows.filter(o=>o.r), before=d===todayStr()&&nowHM()<rpDeadline();
+  got.sort((a,b)=>(b.r&&b.r.issue?1:0)-(a.r&&a.r.issue?1:0)||String(a.s.team||'').localeCompare(String(b.s.team||''))||String(a.s.name).localeCompare(String(b.s.name),'vi'));
+  const nTask=sum(rows.map(o=>({n:o.ts.length})),'n'), wd=['Chủ nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+  return `${tabs('rpm',[['day','Theo ngày'],['person','Theo nhân sự'],['sum','Tổng kết']],'day')}
+  <div class="toolbar"><button class="btn" data-act="rpday" data-d="-1" aria-label="Ngày trước">‹</button><input type="date" id="rpd" data-fdate="rpd" value="${d}" aria-label="Ngày"><button class="btn" data-act="rpday" data-d="1" aria-label="Ngày sau">›</button>
+    <b>${wd[new Date(d+'T00:00:00').getDay()]}, ${fullDmy(d)}</b><span class="spacer"></span>${d!==todayStr()?`<button class="btn" data-act="rpday" data-d="0">Hôm nay</button>`:''}</div>
+  <div class="grid tiles">${tile2('Đã nộp báo cáo',`${sent.length}<span class="small muted"> / ${rows.length}</span>`,`${sent.filter(o=>rpLate(o.r)).length} nộp muộn · chốt ${esc(rpDeadline())}`,'money')}${tile2(before?'Chưa nộp (chưa tới giờ chốt)':'Chưa nộp',`<span class="${miss.length&&!before?'neg':''}">${miss.length}</span>`,'người đi làm hôm đó')}${tile2('Việc giao đã xong',nf(nTask),'trong ngày')}${tile2('Cần hỗ trợ',`<span class="${iss.length?'neg':''}">${iss.length}</span>`,'người báo vướng mắc')}</div>
+  ${miss.length?`<div class="panel" style="margin-top:14px"><span class="small muted" style="margin-right:8px">CHƯA NỘP BÁO CÁO</span>${miss.map(o=>`<span class="pill ${before?'warn':'bad'}">${esc(o.s.name)}</span>`).join(' ')}</div>`:''}
+  <div class="rp-grid">${got.map(o=>`<div class="panel rp-card${o.r&&o.r.issue?' has-issue':''}"><div class="rp-head"><span class="rp-av">${esc(String(o.s.name).trim().split(/\s+/).pop().slice(0,1))}</span><div><b>${esc(o.s.name)}</b><div class="small muted">${esc(o.s.team||o.s.dept||o.s.role||'')}</div></div><span class="spacer"></span>${rpPill(o.r)}${o.r?`<button class="btn" data-act="edit" data-col="reports" data-id="${o.r.id}">Xem</button>`:''}</div>${rpBlock(o.r,o.ts,o.au)}</div>`).join('')}</div>
+  ${got.length?'':emptyBox('Chưa có ai báo cáo ngày này','Nhân sự viết báo cáo ở mục Báo cáo ngày; việc được giao bấm Hoàn thành cũng tự hiện ở đây.','')}`;
 }
 
 function vOrders(){
@@ -850,7 +935,7 @@ function adsPanel(){
 
 
 /* ---------- Lương ---------- */
-const HR=()=>Object.assign({workStart:'08:30',workEnd:'17:30',breakMin:60,graceMin:0,otRate:0,stdDays:26,payByAttendance:false,careDays:30,offDays:'sun',gpsRequired:false,officeLat:'',officeLng:'',radius:200},FLAGS.hr||{});
+const HR=()=>Object.assign({workStart:'08:30',workEnd:'17:30',breakMin:60,graceMin:0,otRate:0,stdDays:26,payByAttendance:false,careDays:30,offDays:'sun',gpsRequired:false,officeLat:'',officeLng:'',radius:200,reportDeadline:'17:30'},FLAGS.hr||{});
 const LOCKED=()=>(FLAGS.locked||[]).includes(S.month);
 const PAID_LEAVE=['Phép năm','Nghỉ ốm'], ABSENCE_TYPES=['Phép năm','Nghỉ ốm','Việc riêng (không lương)'];
 const toMin=t=>{const m=String(t||'').match(/^(\d{1,2}):(\d{2})/);return m?(+m[1])*60+(+m[2]):null;};
@@ -1119,6 +1204,7 @@ function vHr(){
     <td style="white-space:nowrap">${recLocked('leaves',l)?'<span class="small muted">Tháng đã chốt</span>':`<button class="btn primary" data-act="leave" data-id="${l.id}" data-st="Đã duyệt">Duyệt</button> <button class="btn danger" data-act="leave" data-id="${l.id}" data-st="Từ chối">Từ chối</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<div class="muted">Không có đơn nào chờ duyệt.</div>'}
   ${quits.length?`<div class="panel warnbox" style="margin-top:12px"><b>Sắp nghỉ việc:</b> ${quits.map(l=>`${esc(staffName(l.staffId))} (làm đến ${dmy(l.from)})`).join(', ')}. Nhớ thu hồi mã PIN sau ngày cuối.</div>`:''}
   <div class="panel" style="margin-top:20px"><h2>Chấm công hôm nay</h2>${todayBoard()}</div>
+  ${photoLog()}
   <div class="toolbar" style="margin-top:20px"><h2 style="margin:0">Bảng chấm công tháng ${ml}${lockBadge}</h2><span class="spacer"></span>
     ${locked?'':addBtn('attendance','Sửa / bổ sung công')}
     <select id="att-exp" aria-label="Chọn người để xuất"><option value="">Tất cả nhân viên</option>${(()=>{const ds=[...new Set(attStaff().map(x=>x.dept||''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'vi'));return ds.length?`<optgroup label="Theo phòng ban">${ds.map(d=>`<option value="dept:${esc(d)}">Phòng ${esc(d)}</option>`).join('')}</optgroup>`:'';})()}<optgroup label="Từng người">${attStaff().map(x=>`<option value="${x.id}">${esc((x.code?x.code+' · ':'')+x.name)}</option>`).join('')}</optgroup></select>
@@ -1142,6 +1228,7 @@ function vHr(){
     <div class="fld"><label for="hr-pay">Cách tính lương cứng</label><select id="hr-pay"><option value="0" ${!h.payByAttendance?'selected':''}>Đủ lương cứng, không theo công</option><option value="1" ${h.payByAttendance?'selected':''}>Theo ngày công thực tế</option></select></div>
     <div class="fld"><label for="hr-ot">Tiền tăng ca / giờ (₫)</label><input id="hr-ot" type="number" min="0" value="${esc(h.otRate)}"></div>
     <div class="fld"><label for="hr-care">Nhắc chăm sóc khách sau (ngày)</label><input id="hr-care" type="number" min="1" max="365" value="${esc(h.careDays)}"></div>
+    <div class="fld"><label for="hr-rpt">Giờ chốt nộp báo cáo ngày</label><input id="hr-rpt" type="time" value="${esc(h.reportDeadline||'17:30')}"></div>
   </div>
   <h3 style="margin:18px 0 6px">Chấm công bằng điện thoại</h3>
   <div class="fields">
@@ -1153,6 +1240,17 @@ function vHr(){
   <div class="small muted" style="margin-top:6px">Đứng tại công ty, bấm “Lấy vị trí hiện tại” rồi Lưu. Máy chấm công vẫn hoạt động bình thường, không bị ảnh hưởng bởi cài đặt này.</div>
   <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="getloc">Lấy vị trí hiện tại làm vị trí công ty</button><button class="btn primary" data-act="hrsave">Lưu cài đặt</button></div></div>`;
   return html;
+}
+/* Lịch sử ảnh + vị trí chấm công bằng điện thoại (mọi ngày trong tháng, không chỉ hôm nay) */
+function photoLog(){
+  const f=S.f.plog||{}, rows=D.attendance.filter(a=>String(a.date).startsWith(S.month)&&(a.photoIn||a.photoOut||a.locIn||a.locOut)&&(!f.staff||a.staffId===f.staff))
+    .sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:String(staffName(a.staffId)).localeCompare(staffName(b.staffId),'vi'));
+  const ppl=[...new Set(D.attendance.filter(a=>String(a.date).startsWith(S.month)&&(a.photoIn||a.photoOut||a.locIn||a.locOut)).map(a=>a.staffId))];
+  return `<div class="panel" style="margin-top:20px"><div class="toolbar" style="margin-bottom:8px"><h2 style="margin:0">Ảnh & vị trí chấm công bằng điện thoại · tháng ${S.month.slice(5)}/${S.month.slice(0,4)}</h2><span class="spacer"></span>
+    <select id="plog-st" data-flt="plog" data-k="staff" aria-label="Lọc nhân viên"><option value="">Tất cả (${ppl.length} người)</option>${ppl.map(id=>`<option value="${id}" ${f.staff===id?'selected':''}>${esc(staffName(id))}</option>`).join('')}</select></div>
+  ${rows.length?`<div class="tablewrap"><table><thead><tr><th>Ngày</th><th>Nhân viên</th><th>Vào ca</th><th>Tan ca</th></tr></thead><tbody>${rows.map(a=>`<tr><td>${fullDmy(a.date)}</td><td><b>${esc(staffName(a.staffId))}</b></td>
+    <td>${a.checkIn?esc(a.checkIn):'—'}${mapLink(a.locIn)}${photoLink(a.photoIn)}</td><td>${a.checkOut?esc(a.checkOut):'—'}${mapLink(a.locOut)}${photoLink(a.photoOut)}</td></tr>`).join('')}</tbody></table></div>`
+   :'<div class="muted">Tháng này chưa có lượt chấm công nào kèm ảnh hoặc vị trí. Đổi tháng ở góc trên để xem tháng trước.</div>'}</div>`;
 }
 function clockBox(){
   const t=todayStr(), a=D.attendance.find(x=>x.staffId===ME.id&&x.date===t), sh=shiftOf(ME.id), h=HR();
@@ -1464,7 +1562,7 @@ function openForm(col,id,preset){
     if(!rec&&col==='staff'&&f.k==='pin')v=String(Math.floor(100000+Math.random()*900000));
     if(!rec&&preset&&preset[f.k]!=null)v=preset[f.k];
     if(v==null)v='';
-    const lock=!can||(!isAdmin()&&(f.adminOnly||((col==='reports'||col==='leaves')&&f.k==='staffId')||(col==='leaves'&&f.k==='status')||(col==='tasks'&&rec&&rec.createdBy&&rec.createdBy!==ME.id&&!['status','report'].includes(f.k))));
+    const lock=!can||(!isAdmin()&&(f.adminOnly||((col==='reports'||col==='leaves')&&f.k==='staffId')||(col==='leaves'&&f.k==='status')||(col==='tasks'&&rec&&rec.createdBy&&rec.createdBy!==ME.id&&!['status','report','link'].includes(f.k))));
     const id='f_'+f.k, ro=lock?' disabled':'', lab=`<label for="${id}" data-base="${esc(f.l)}">${f.l}${f.req?' *':''}</label>`;
     let inp;
     if(f.t==='area') inp=`<textarea id="${id}" name="${f.k}"${ro}>${esc(v)}</textarea>`;
@@ -1473,7 +1571,7 @@ function openForm(col,id,preset){
     else if(f.t==='shift') inp=`<select id="${id}" name="${f.k}"${ro}><option value="">Ca chung (giờ mặc định)</option>${(D.shifts||[]).map(x=>`<option value="${x.id}" ${x.id===v?'selected':''}>${esc(x.name)} · ${esc(x.start)}–${esc(x.end)}</option>`).join('')}</select>`;
     else if(f.t==='opts') inp=`<select id="${id}" name="${f.k}"${ro}>${f.opts.map(([k,l])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
     else if(f.t==='team'){const dp=rec?rec.dept:(preset&&preset.dept)||''; inp=`<select id="${id}" name="${f.k}"${ro}>${teamOpts(dp,v)}</select>`;}
-    else if(f.t==='teamsel') inp=`<select id="${id}" name="${f.k}"${ro}>${Object.keys(TEAMS).map(d=>`<optgroup label="${esc(d)}">${TEAMS[d].map(t=>`<option ${t===v?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`).join('')}</select>`;
+    else if(f.t==='teamsel'){const oth=DEPTS.filter(d=>!TEAMS[d]);inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn team / phòng nhận —</option>${Object.keys(TEAMS).map(d=>`<optgroup label="${esc(d)}">${TEAMS[d].map(t=>`<option ${t===v?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`).join('')}${oth.length?`<optgroup label="Phòng ban khác">${oth.map(t=>`<option ${t===v?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`:''}</select>`;}
     else if(f.t==='perms'){const on=String(v||'').split(',');inp=`<div class="permbox">${PERMS.map(([k,l])=>`<label class="chk"><input type="checkbox" name="perms_${k}" value="${k}" ${on.includes(k)?'checked':''}${ro}> ${esc(l)}</label>`).join('')}<div class="small muted">Mặc định: phòng Marketing xem chỉ số MKT, phòng Kinh doanh xem doanh thu, phòng Nhân sự xem chấm công. Tick để cấp thêm cho người cần.</div></div>`;}
     else if(f.t==='chan'){const list=(D.kenh||[]).filter(c=>c.active!=='Không'||c.id===v);inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn kênh —</option>${CH_GROUPS.map(g=>{const cs=list.filter(c=>c.group===g.k);return cs.length?`<optgroup label="${esc(g.l)}">${cs.map(c=>`<option value="${c.id}" ${c.id===v?'selected':''}>${esc(c.name)}</option>`).join('')}</optgroup>`:'';}).join('')}</select>`;}
     else if(f.t==='staff') inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn —</option>${staffFor(v).map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
@@ -1515,6 +1613,8 @@ document.getElementById('form').addEventListener('submit',async e=>{
     if(obj.type==='Quên chấm công'&&!obj.timeIn&&!obj.timeOut){formErr('Nhập giờ vào hoặc giờ ra thực tế.');return;}
     if(obj.type==='Nghỉ việc'&&!obj.reason){formErr('Vui lòng ghi lý do nghỉ việc.');return;}
   }
+  if(col==='tasks'){const old=id&&D.tasks.find(x=>x.id===id);obj.doneAt=obj.status==='Xong'?((old&&old.status==='Xong'&&old.doneAt)||todayStr()):'';}
+  if(col==='reports'&&!obj.done&&!obj.plan&&!obj.issue){formErr('Ghi ít nhất một mục: ngày mai làm gì, vướng mắc hoặc việc khác đã làm.');return;}
   if(col==='shifts'&&obj.end<=obj.start){formErr('Giờ ra phải sau giờ vào.');return;}
   if(col==='staff'){obj.username=String(obj.username||'').toLowerCase();if(String(obj.pin).length<4){formErr('Mật khẩu tối thiểu 4 ký tự.');return;}
     if(!/^[a-z0-9._@-]{3,40}$/.test(obj.username)){formErr('Tên đăng nhập chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới (3–40 ký tự).');return;}
@@ -1555,6 +1655,13 @@ document.addEventListener('click',async e=>{
   const act=a.dataset.act;
   if(act==='mprev')shiftMonth(-1); else if(act==='mnext')shiftMonth(1);
   else if(act==='logout')logout();
+  else if(act==='tkdone'){const x=D.tasks.find(t=>t.id===a.dataset.id);if(!x)return;openForm('tasks',x.id);setTimeout(()=>{const st=document.getElementById('f_status');if(st)st.value='Xong';document.getElementById('form-title').textContent='Báo hoàn thành: '+x.title;const l=document.getElementById('f_link')||document.getElementById('f_report');l&&l.focus();},40);}
+  else if(act==='tkok'){const x=D.tasks.find(t=>t.id===a.dataset.id);if(x){a.disabled=true;await saveQuiet('tasks',x.id,{...x,review:'Đã duyệt'},'Đã duyệt kết quả');}}
+  else if(act==='tkredo'){const x=D.tasks.find(t=>t.id===a.dataset.id);if(!x)return;const why=prompt('Cần làm lại điểm nào? (nhân viên sẽ thấy dòng này)',x.reviewNote||'');if(why===null)return;
+    a.disabled=true;await saveQuiet('tasks',x.id,{...x,status:'Đang làm',review:'Làm lại',reviewNote:why.trim(),doneAt:''},'Đã trả việc về để làm lại');}
+  else if(act==='rpday'){const n=+a.dataset.d;S.f.rpd=n?addDays(S.f.rpd||todayStr(),n):todayStr();render();}
+  else if(act==='rpadd'){const r=D.reports.find(x=>x.staffId===ME.id&&x.date===todayStr());r?openForm('reports',r.id):openForm('reports',null,{date:todayStr(),staffId:ME.id});}
+  else if(act==='navsec'){const k=a.dataset.sec;NAVC[k]=!NAVC[k];try{localStorage.setItem('md-navc',JSON.stringify(NAVC))}catch(_){}document.getElementById('navlist').innerHTML=navHtml();}
   else if(act==='reload'){refresh();toast('Đang tải dữ liệu mới…');}
   else if(act==='add')openForm(a.dataset.col);
   else if(act==='advance'){e.stopPropagation();const x=D.tasks.find(t=>t.id===a.dataset.id);if(!x)return;
@@ -1591,7 +1698,7 @@ document.addEventListener('click',async e=>{
     try{let total=0,res=null;for(let i=0;i<r.recs.length;i+=800){res=await run('importAttendance',PIN,r.recs.slice(i,i+800),IMP.map);total+=res.imported||0;}
       IMP=null;apply(res);toast('Đã nhập '+nf(total)+' ngày công');}catch(err){toast(msg(err));a.disabled=false;a.textContent='Thử lại';}}
   else if(act==='hrsave'){const g=id=>document.getElementById(id).value;
-    await act_(a,'saveHrSettings',[{workStart:g('hr-start'),workEnd:g('hr-end'),breakMin:g('hr-brk'),graceMin:g('hr-grace'),stdDays:g('hr-std'),offDays:g('hr-off'),payByAttendance:g('hr-pay')==='1',otRate:g('hr-ot'),careDays:g('hr-care'),gpsRequired:g('hr-gps')==='1',radius:g('hr-rad'),officeLat:g('hr-lat').trim(),officeLng:g('hr-lng').trim()}],'Đã lưu cài đặt');}
+    await act_(a,'saveHrSettings',[{workStart:g('hr-start'),workEnd:g('hr-end'),breakMin:g('hr-brk'),graceMin:g('hr-grace'),stdDays:g('hr-std'),offDays:g('hr-off'),payByAttendance:g('hr-pay')==='1',otRate:g('hr-ot'),careDays:g('hr-care'),reportDeadline:g('hr-rpt'),gpsRequired:g('hr-gps')==='1',radius:g('hr-rad'),officeLat:g('hr-lat').trim(),officeLng:g('hr-lng').trim()}],'Đã lưu cài đặt');}
   else if(act==='care'){openForm('care');setTimeout(()=>{const p=document.getElementById('f_phone'),n=document.getElementById('f_customer');if(p)p.value=a.dataset.phone||'';if(n)n.value=a.dataset.name||'';},0);}
   else if(act==='stage'){e.stopPropagation();const x=D.contents.find(t=>t.id===a.dataset.id);if(!x)return;const nx=STAGES[STAGES.indexOf(x.stage||STAGES[0])+1];if(!nx)return;
     a.disabled=true;try{apply(await run('save',PIN,'contents',x.id,{...x,stage:nx,publishDate:nx==='Đã đăng'&&!x.publishDate?todayStr():x.publishDate}));toast('Đã chuyển sang '+nx);}catch(err){toast(msg(err));a.disabled=false;}}
@@ -1667,6 +1774,10 @@ FIELDS.mktplan.splice(FIELDS.mktplan.length-1,0,{k:'videoTarget',l:'Mục tiêu 
   {k:'fbTarget',l:'Mục tiêu DT Facebook (₫)',t:'num'},{k:'fbAdsTarget',l:'Mục tiêu DT Facebook Ads (₫)',t:'num'},{k:'webVisitsTarget',l:'Mục tiêu lượt truy cập web',t:'num'},{k:'seoTarget',l:'Mục tiêu bài SEO',t:'num'});
 Object.assign(NAMES,{kenh:'kênh',chrep:'báo cáo kênh',chkpi:'KPI kênh',cltpl:'đầu việc',clog:'checklist',worklog:'công việc',ideas:'đề xuất',adsrep:'báo cáo Ads',adskpi:'KPI Ads',webrep:'báo cáo web',reqs:'order nội bộ'});
 const FORM_HOOKS={
+  tasks(rec){if(isAdmin()&&(!rec||rec.status==='Xong'||rec.reviewNote))return;const b=document.querySelector('#form-fields .fld[data-k="reviewNote"]');if(b&&(!isAdmin()?!(rec&&rec.reviewNote):true))b.hidden=true;},
+  reports(rec){const d=(rec&&rec.date)||todayStr(),sid=(rec&&rec.staffId)||ME.id,ts=tasksDoneOn(sid,d),au=autoItems(sid,d);
+    const box=document.createElement('div');box.className='fld wide';box.innerHTML=`<div class="notice">${ts.length||au.length?`<b>Hệ thống đã tự ghi cho ngày ${fullDmy(d)}:</b>${ts.length?`<div style="margin-top:6px"><span class="tag">Việc được giao</span> ${ts.map(x=>esc(x.title)).join(' · ')}</div>`:''}${au.map(([g,xs])=>`<div style="margin-top:4px"><span class="tag">${esc(g)}</span> ${xs.map(esc).join(' · ')}</div>`).join('')}<div class="small muted" style="margin-top:6px">Không cần ghi lại những việc này.</div>`:'Hôm nay hệ thống chưa ghi nhận việc nào (việc được giao, checklist, Media, Ads…). Ghi ngắn gọn việc đã làm ở ô cuối.'}</div>`;
+    const w=document.getElementById('form-fields');w.insertBefore(box,w.querySelector('.fld[data-k="plan"]'));},
   chrep(){const sel=document.getElementById('f_channelId');const shape=()=>{const c=chanOf(sel&&sel.value),full=!c||grpOf(c.group).full;
       FIELDS.chrep.forEach(f=>{if(!f.full)return;const b=document.querySelector(`#form-fields .fld[data-k="${f.k}"]`);if(b)b.hidden=!full;});};
     shape();sel&&sel.addEventListener('change',shape);},
@@ -1686,9 +1797,9 @@ function permsOf(s){if(!s)return{};if(s.role==='Quản lý')return{mkt:1,sales:1
 /* ---------- menu ---------- */
 const NAV=[
   {sec:''},{v:'overview',l:'Tổng quan'},
-  {v:'mytasks',l:'Việc được giao',show:()=>!isAdmin(),badge:()=>assignedToMe().filter(x=>x.status!=='Xong').length},
-  {v:'given',l:'Việc đã giao',show:isAdmin,badge:()=>D.tasks.filter(x=>x.createdBy===ME.id&&x.staffId&&x.staffId!==ME.id&&x.status!=='Xong'&&x.due&&x.due<todayStr()).length},{v:'mycl',l:'Checklist cá nhân'},{v:'tasks',l:'Công việc',badge:()=>D.tasks.filter(x=>x.status!=='Xong'&&x.due&&x.due<todayStr()&&(isAdmin()||x.staffId===ME.id)).length},
-  {v:'cal',l:'Lịch giao việc'},{v:'reports',l:'Báo cáo ngày'},{v:'reqs',l:'Order nội bộ',badge:()=>openReqsForMe().filter(r=>r.status==='Mới').length},{v:'ideas',l:'Đề xuất cải tiến'},
+  {v:'mytasks',l:'Việc được giao',show:()=>!isAdmin(),badge:()=>assignedToMe().filter(x=>x.status!=='Xong').length},{v:'reports',l:'Báo cáo ngày',show:()=>!isAdmin(),badge:()=>myReportDue()?1:0},
+  {v:'given',l:'Việc đã giao',show:isAdmin,badge:()=>D.tasks.filter(x=>x.createdBy===ME.id&&x.staffId&&x.staffId!==ME.id&&((x.status!=='Xong'&&x.due&&x.due<todayStr())||(x.status==='Xong'&&x.review==='Chờ duyệt'))).length},{v:'mycl',l:'Checklist cá nhân'},{v:'tasks',l:'Công việc',badge:()=>D.tasks.filter(x=>x.status!=='Xong'&&x.due&&x.due<todayStr()&&(isAdmin()||x.staffId===ME.id)).length},
+  {v:'cal',l:'Lịch giao việc'},{v:'reports',l:'Báo cáo ngày',show:isAdmin},{v:'reqs',l:'Order nội bộ',badge:()=>openReqsForMe().filter(r=>r.status==='Mới').length},{v:'ideas',l:'Đề xuất cải tiến'},
   {v:'hr',l:'Nhân sự & chấm công'},{v:'kpi',l:'KPI cá nhân'},
   {sec:'Kinh doanh',show:()=>can('sales')},{v:'orders',l:'Đơn hàng',show:()=>can('sales')},{v:'customers',l:'Khách hàng',show:()=>can('sales')},{v:'ranking',l:'Thi đua',show:()=>can('sales')},
   {sec:'Marketing',show:()=>can('mkt')},{v:'mktov',l:'Tổng quan MKT',show:()=>can('mkt')},
@@ -1699,10 +1810,18 @@ const NAV=[
   {sec:'Team Media',show:()=>can('mkt')},{v:'mediaov',l:'Tổng quan Media',show:()=>can('mkt')},{v:'worklog',l:'Báo cáo công việc',show:()=>can('mkt'),badge:()=>isAdmin()?D.worklog.filter(w=>(w.approved||'Chờ duyệt')==='Chờ duyệt').length:0},
   {sec:'Team Ads Facebook',show:()=>can('mkt')},{v:'adsov',l:'Tổng quan Ads',show:()=>can('mkt')},{v:'adsrep',l:'Báo cáo ngày Ads',show:()=>can('mkt')},{v:'adskpi',l:'KPI tháng Ads',show:()=>can('mkt')},
   {sec:'Quản trị',show:isAdmin},{v:'money',l:'Tiền',show:isAdmin},{v:'staff',l:'Quản lý nhân sự',show:isAdmin,badge:()=>D.staff.filter(isActive).length,muted:1},{v:'channels',l:'Kết nối',show:isAdmin}];
-function navAllowed(v){const it=NAV.find(x=>x.v===v);return !!it&&(!it.show||it.show());}
-function navHtml(){return NAV.filter(x=>!x.show||x.show()).map(x=>{if(x.sec!==undefined)return x.sec?`<div class="navsec">${esc(x.sec)}</div>`:'';
-  const n=x.badge?x.badge():0;
-  return `<button data-view="${x.v}" class="${x.sub?'sub':''}"${x.v===S.view?' aria-current="page"':''}>${esc(x.l)}${n?`<span class="${x.muted?'small muted':'badge'}">${n}</span>`:''}</button>`;}).join('');}
+function navAllowed(v){return NAV.some(x=>x.v===v&&(!x.show||x.show()));}
+/* Menu gọn: các kênh con chỉ hiện khi đang ở Tổng quan MKT / một kênh; bấm tên nhóm để thu gọn / mở nhóm */
+let NAVC={};try{NAVC=JSON.parse(localStorage.getItem('md-navc')||'{}')||{}}catch(_){NAVC={}}
+const mktOpen=()=>S.view==='mktov'||String(S.view).startsWith('ch_');
+function navHtml(){let sec='';const items=NAV.filter(x=>!x.show||x.show()),NC=window.matchMedia&&matchMedia('(max-width:760px)').matches?{}:NAVC;
+  const secHas=nm=>{let on=false,res=false;items.forEach(y=>{if(y.sec!==undefined){on=y.sec===nm;return;}if(on&&y.v===S.view)res=true;});return res;};
+  return items.map(x=>{if(x.sec!==undefined){sec=x.sec;if(!x.sec)return '';const shut=NC[x.sec]&&!secHas(x.sec);
+      return `<button type="button" class="navsec" data-act="navsec" data-sec="${esc(x.sec)}" aria-expanded="${!shut}">${esc(x.sec)}<span class="car">${shut?'▸':'▾'}</span></button>`;}
+    if(sec&&NC[sec]&&!secHas(sec))return '';
+    if(x.sub&&!mktOpen())return '';
+    const n=x.badge?x.badge():0, car=x.v==='mktov'?`<span class="car">${mktOpen()?'▾':'▸'}</span>`:'';
+    return `<button data-view="${x.v}" class="${x.sub?'sub':''}"${x.v===S.view?' aria-current="page"':''}>${esc(x.l)}${n?`<span class="${x.muted?'small muted':'badge'}">${n}</span>`:''}${car}</button>`;}).join('');}
 Object.assign(TITLES,{mytasks:'Việc được giao',given:'Việc đã giao cho nhân sự',mycl:'Checklist cá nhân',cal:'Lịch giao việc',reqs:'Order nội bộ',ideas:'Đề xuất cải tiến',hr:'Nhân sự & chấm công',kpi:'KPI cá nhân',mktov:'Tổng quan Marketing',
   kenh:'Quản lý kênh',checklist:'Checklist công việc',chkpi:'KPI tháng theo kênh',web:'Báo cáo web',mediaov:'Tổng quan Media',worklog:'Báo cáo công việc',adsov:'Tổng quan Ads',adsrep:'Báo cáo ngày · Ads Facebook',adskpi:'KPI tháng · Ads Facebook',staff:'Quản lý nhân sự',mkt:'Quảng cáo Facebook'});
 CH_GROUPS.forEach(g=>TITLES['ch_'+g.k]=g.l);
@@ -1723,7 +1842,11 @@ const kpiOf=(chId,m)=>{const k=(D.chkpi||[]).find(x=>x.month===(m||S.month)&&x.c
 const plan=()=>(D.mktplan||[]).find(x=>x.month===S.month)||{};
 const daysIn=m=>+monthEnd(m).slice(8);
 function paceDay(m){const t=todayStr(),n=daysIn(m);if(t.slice(0,7)>m)return n;if(t.slice(0,7)<m)return 0;return +t.slice(8);}
-function openReqsForMe(){const tm=myTeam();return (D.reqs||[]).filter(r=>(r.status==='Mới'||r.status==='Đang làm')&&(isAdmin()||(tm&&r.toTeam===tm)));}
+/* Order gửi đến tôi: đúng team, đúng phòng ban, hoặc tôi chưa xếp team thì nhận order của các team trong phòng mình */
+const myDept=()=>(ME&&ME.dept)||myStaff().dept||deptOfTeam(myTeam())||'';
+const reqForMe=r=>{const tm=myTeam(),dp=myDept(),to=String(r.toTeam||'').trim();return !!to&&((tm&&to===tm)||(dp&&to===dp)||(!tm&&!!dp&&deptOfTeam(to)===dp));};
+const myReqLabel=()=>myTeam()?'team '+myTeam():myDept()?'phòng '+myDept():'';
+function openReqsForMe(){return (D.reqs||[]).filter(r=>(r.status==='Mới'||r.status==='Đang làm')&&(isAdmin()||reqForMe(r)));}
 function myClToday(){const t=todayStr();return sum((D.clog||[]).filter(l=>l.date===t&&l.staffId===ME.id),'qty');}
 function myClBox(){const items=(D.cltpl||[]).filter(i=>i.staffId===ME.id);if(!items.length)return '<div class="muted">Chưa có đầu việc. Quản lý sẽ thêm cho bạn.</div>';
   return `<div class="small muted">Vào mục <b>Checklist cá nhân</b> để điền số lượng.</div>`;}
@@ -1947,14 +2070,15 @@ VIEWS.web=function(){
 
 /* ---------- Order nội bộ ---------- */
 VIEWS.reqs=function(){
-  const tm=myTeam(),tab=tabVal('rqt',isAdmin()?'all':'in'),all=D.reqs||[],t=todayStr();
-  let rs=tab==='in'?all.filter(r=>tm&&r.toTeam===tm):tab==='out'?all.filter(r=>r.createdBy===ME.id):all;
+  const tm=myReqLabel(),tab=tabVal('rqt',isAdmin()?'all':(tm?'in':'out')),all=D.reqs||[],t=todayStr();
+  let rs=tab==='in'?all.filter(reqForMe):tab==='out'?all.filter(r=>r.createdBy===ME.id):all;
   const fs=S.f.rqs||'open';rs=rs.filter(r=>fs==='all'||(fs==='open'?(r.status==='Mới'||r.status==='Đang làm'):r.status===fs)).sort((a,b)=>(a.deadline||'9')<(b.deadline||'9')?-1:1);
   const stp=s=>`<span class="pill ${s==='Hoàn thành'?'good':s==='Hủy'?'bad':s==='Đang làm'?'warn':'acc'}">${esc(s||'Mới')}</span>`;
-  return `${tabs('rqt',[...(tm?[['in',`Gửi đến team ${esc(tm)}`]]:[]),['out','Tôi đã gửi'],...(isAdmin()?[['all','Tất cả']]:[])],isAdmin()?'all':'in')}
+  return `${tabs('rqt',[...(tm?[['in',`Gửi đến ${esc(tm)} (${(D.reqs||[]).filter(r=>reqForMe(r)&&(r.status==='Mới'||r.status==='Đang làm')).length})`]]:[]),['out','Tôi đã gửi'],...(isAdmin()?[['all','Tất cả']]:[])],isAdmin()?'all':(tm?'in':'out'))}
+  ${!isAdmin()&&!tm?'<div class="notice" style="margin-bottom:10px">Tài khoản của bạn chưa được xếp phòng ban / team nên chưa nhận được order. Báo quản lý vào <b>Quản lý nhân sự</b> chọn phòng ban và team cho bạn.</div>':''}
   <div class="toolbar"><select id="rqs" data-fsel="rqs" aria-label="Trạng thái"><option value="open" ${fs==='open'?'selected':''}>Đang mở</option>${REQ_ST.map(s=>`<option ${fs===s?'selected':''}>${s}</option>`).join('')}<option value="all" ${fs==='all'?'selected':''}>Tất cả trạng thái</option></select><span class="spacer"></span>${addBtn('reqs','Tạo order cho team khác')}</div>
   ${rs.length?`<div class="tablewrap"><table><thead><tr><th>Ngày</th><th>Người gửi</th><th>Team nhận</th><th>Việc</th><th>Hạn</th><th>Người làm</th><th>Trạng thái</th><th></th></tr></thead><tbody>
-  ${rs.map(r=>{const od=r.deadline&&r.deadline<t&&r.status!=='Hoàn thành'&&r.status!=='Hủy',mineT=isAdmin()||(tm&&r.toTeam===tm);return `<tr><td>${dmy(r.date)}</td><td>${esc(staffName(r.createdBy))}</td><td><span class="pill">${esc(r.toTeam)}</span></td><td><b>${esc(r.title)}</b>${r.detail?`<div class="small muted">${esc(String(r.detail).slice(0,120))}</div>`:''}</td>
+  ${rs.map(r=>{const od=r.deadline&&r.deadline<t&&r.status!=='Hoàn thành'&&r.status!=='Hủy',mineT=isAdmin()||reqForMe(r);return `<tr><td>${dmy(r.date)}</td><td>${esc(staffName(r.createdBy))}</td><td><span class="pill">${esc(r.toTeam)}</span></td><td><b>${esc(r.title)}</b>${r.detail?`<div class="small muted">${esc(String(r.detail).slice(0,120))}</div>`:''}</td>
     <td class="${od?'neg':''}">${r.deadline?dmy(r.deadline):'—'}${od?' · trễ':''}</td><td>${r.assignee?esc(staffName(r.assignee)):'—'}</td><td>${stp(r.status)}</td>
     <td style="white-space:nowrap">${mineT&&r.status==='Mới'?`<button class="btn primary" data-act="reqst" data-id="${r.id}" data-st="Đang làm">Nhận việc</button> `:''}${mineT&&r.status==='Đang làm'?`<button class="btn primary" data-act="reqst" data-id="${r.id}" data-st="Hoàn thành">Xong</button> `:''}<button class="btn" data-act="edit" data-col="reqs" data-id="${r.id}">${canEdit('reqs',r)?'Sửa':'Xem'}</button></td></tr>`;}).join('')}</tbody></table></div>`
    :emptyBox('Không có order nào','Team này cần team khác làm gì (quay video, viết bài, chạy ads…) thì tạo order, team nhận sẽ thấy ngay.','')}`;
@@ -1974,16 +2098,22 @@ VIEWS.cal=function(){
 
 /* ---------- Việc được giao (từ quản lý) ---------- */
 const assignedToMe=()=>D.tasks.filter(x=>x.staffId===ME.id&&x.createdBy&&x.createdBy!==ME.id);
+const revPill=x=>x.status!=='Xong'&&x.review!=='Làm lại'?'':`<span class="pill ${x.review==='Đã duyệt'?'good':x.review==='Làm lại'?'bad':x.review==='Chờ duyệt'?'warn':'good'}">${esc(x.review||'Đã xong')}</span>`;
+const linkA=(u,t)=>u?`<a href="${esc(/^https?:\/\//i.test(u)?u:'https://'+u)}" target="_blank" rel="noopener">${t||'🔗 Link kết quả'}</a>`:'';
+const isAssigned=x=>x&&x.staffId&&x.createdBy&&x.createdBy!==x.staffId;
 function taskCard(x,forBoss){const t=todayStr(),od=x.due&&x.due<t&&x.status!=='Xong';
   const pr=`<span class="pill ${x.priority==='Cao'?'bad':x.priority==='Thấp'?'':'warn'}">${esc(x.priority||'Trung bình')}</span>`;
-  const st=`<span class="pill ${x.status==='Xong'?'good':x.status==='Đang làm'?'warn':'acc'}">${esc(x.status||'Cần làm')}</span>`;
-  return `<div class="panel" style="padding:14px 16px"><div class="toolbar" style="margin:0"><b style="font-size:15px">${esc(x.title)}</b>${pr}${st}<span class="spacer"></span>
-    <span class="small ${od?'neg':'muted'}">${x.due?'Hạn '+fullDmy(x.due)+(od?' · quá hạn':''):'Không có hạn'}</span></div>
+  const st=x.status==='Xong'?revPill(x):`<span class="pill ${x.status==='Đang làm'?'warn':'acc'}">${esc(x.status||'Cần làm')}</span>${x.review==='Làm lại'?' '+revPill(x):''}`;
+  const late=x.status==='Xong'&&x.due&&doneDay(x)>x.due;
+  return `<div class="panel" style="padding:14px 16px${x.review==='Chờ duyệt'&&forBoss?';border-color:var(--warn,#C7832A)':''}"><div class="toolbar" style="margin:0"><b style="font-size:15px">${esc(x.title)}</b>${pr}${st}<span class="spacer"></span>
+    <span class="small ${od||late?'neg':'muted'}">${x.due?'Hạn '+fullDmy(x.due)+(od?' · quá hạn':''):'Không có hạn'}${x.status==='Xong'&&doneDay(x)?' · xong '+dmy(doneDay(x))+(late?' (trễ)':''):''}</span></div>
     <div class="small muted" style="margin-top:4px">${forBoss?'Giao cho <b>'+esc(staffName(x.staffId))+'</b>':'Giao bởi <b>'+esc(staffName(x.createdBy))+'</b>'}${x.createdAt?' · '+fullDmy(String(x.createdAt).slice(0,10)):''}</div>
     ${x.note?`<div style="margin-top:8px;white-space:pre-wrap">${esc(x.note)}</div>`:''}
-    ${x.report?`<div class="notice" style="margin-top:8px"><b>Báo cáo kết quả:</b> ${esc(x.report)}</div>`:''}
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${!forBoss&&x.status!=='Xong'?`${x.status!=='Đang làm'?`<button class="btn" data-act="tkst" data-id="${x.id}" data-st="Đang làm">Bắt đầu làm</button>`:''}<button class="btn primary" data-act="tkst" data-id="${x.id}" data-st="Xong">Hoàn thành</button>`:''}
-      <button class="btn" data-act="edit" data-col="tasks" data-id="${x.id}">${forBoss?'Sửa':'Ghi báo cáo kết quả'}</button></div></div>`;}
+    ${x.report||x.link?`<div class="notice" style="margin-top:8px">${x.report?`<b>Báo cáo kết quả:</b> ${esc(x.report)}`:''}${x.link?`<div style="margin-top:${x.report?4:0}px">${linkA(x.link)}</div>`:''}</div>`:''}
+    ${x.reviewNote?`<div class="notice ${x.review==='Làm lại'?'warnbox':''}" style="margin-top:8px"><b>${x.review==='Làm lại'?'Quản lý yêu cầu làm lại':'Nhận xét của quản lý'}:</b> ${esc(x.reviewNote)}</div>`:''}
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${!forBoss&&x.status!=='Xong'?`${x.status!=='Đang làm'?`<button class="btn" data-act="tkst" data-id="${x.id}" data-st="Đang làm">Bắt đầu làm</button>`:''}<button class="btn primary" data-act="tkdone" data-id="${x.id}">Hoàn thành</button>`:''}
+      ${forBoss&&x.status==='Xong'&&x.review==='Chờ duyệt'?`<button class="btn primary" data-act="tkok" data-id="${x.id}">✓ Duyệt</button><button class="btn danger" data-act="tkredo" data-id="${x.id}">Yêu cầu làm lại</button>`:''}
+      <button class="btn" data-act="edit" data-col="tasks" data-id="${x.id}">${forBoss?'Sửa':x.status==='Xong'?'Xem':'Ghi báo cáo / link'}</button></div></div>`;}
 VIEWS.mytasks=function(){
   const all=assignedToMe(),f=tabVal('mtk','open'),t=todayStr();
   const open=all.filter(x=>x.status!=='Xong').sort((a,b)=>(a.due||'9')<(b.due||'9')?-1:1),done=all.filter(x=>x.status==='Xong').sort((a,b)=>String(b.updatedAt||'')<String(a.updatedAt||'')?-1:1);
@@ -1995,11 +2125,11 @@ VIEWS.mytasks=function(){
 VIEWS.given=function(){
   const st=(S.f.given||{}).staff||'',f=tabVal('gvt','open'),t=todayStr();
   const all=D.tasks.filter(x=>x.createdBy===ME.id&&x.staffId&&x.staffId!==ME.id&&(!st||x.staffId===st));
-  const list=all.filter(x=>f==='all'||(f==='done'?x.status==='Xong':x.status!=='Xong')).sort((a,b)=>(a.due||'9')<(b.due||'9')?-1:1);
+  const list=all.filter(x=>f==='all'||(f==='rev'?x.status==='Xong'&&x.review==='Chờ duyệt':f==='done'?x.status==='Xong':x.status!=='Xong')).sort((a,b)=>(a.due||'9')<(b.due||'9')?-1:1);
   const ppl=[...new Set(all.map(x=>x.staffId))].map(id=>{const xs=all.filter(x=>x.staffId===id);return {id,n:xs.length,d:xs.filter(x=>x.status==='Xong').length,o:xs.filter(x=>x.status!=='Xong'&&x.due&&x.due<t).length};});
   return `<div class="toolbar">${staffFilter('given')}<span class="spacer"></span>${addBtn('tasks','Giao việc mới')}</div>
   ${ppl.length?`<div class="tablewrap" style="margin-bottom:14px"><table><thead><tr><th>Nhân sự</th><th class="num">Đã giao</th><th class="num">Hoàn thành</th><th class="num">Quá hạn</th><th>Tiến độ</th></tr></thead><tbody>${ppl.map(p=>`<tr><td><b>${esc(staffName(p.id))}</b></td><td class="num">${p.n}</td><td class="num">${p.d}</td><td class="num ${p.o?'neg':''}">${p.o}</td><td style="min-width:140px"><div class="prog good"><span style="width:${p.n?p.d/p.n*100:0}%"></span></div></td></tr>`).join('')}</tbody></table></div>`:''}
-  ${tabs('gvt',[['open','Chưa xong'],['done','Đã xong'],['all','Tất cả']],'open')}
+  ${tabs('gvt',[['rev',`Chờ duyệt (${all.filter(x=>x.status==='Xong'&&x.review==='Chờ duyệt').length})`],['open','Chưa xong'],['done','Đã xong'],['all','Tất cả']],'open')}
   <div class="list">${list.map(x=>taskCard(x,true)).join('')||emptyBox('Chưa giao việc nào','Bấm "Giao việc mới", chọn người phụ trách, hạn và mô tả. Nhân sự sẽ thấy ngay ở mục "Việc được giao".','')}</div>`;
 };
 
@@ -2040,10 +2170,13 @@ VIEWS.staff=function(){
 function bellItems(){const L=[],t=todayStr(),tm=myTeam();
   if(isAdmin()){const lv=D.leaves.filter(l=>(l.status||'Chờ duyệt')==='Chờ duyệt').length;if(lv)L.push([`${lv} đơn từ chờ duyệt`,'hr']);
     const wl=(D.worklog||[]).filter(w=>(w.approved||'Chờ duyệt')==='Chờ duyệt').length;if(wl)L.push([`${wl} công việc Media chờ duyệt`,'worklog']);
-    const id=(D.ideas||[]).filter(i=>(i.status||'Mới')==='Mới').length;if(id)L.push([`${id} đề xuất mới`,'ideas']);}
-  const rq=(D.reqs||[]).filter(r=>r.status==='Mới'&&(isAdmin()||(tm&&r.toTeam===tm))).length;if(rq)L.push([`${rq} order mới ${isAdmin()?'giữa các team':'gửi đến team '+tm}`,'reqs']);
+    const id=(D.ideas||[]).filter(i=>(i.status||'Mới')==='Mới').length;if(id)L.push([`${id} đề xuất mới`,'ideas']);
+    const rv=D.tasks.filter(x=>x.status==='Xong'&&x.review==='Chờ duyệt'&&x.createdBy===ME.id).length;if(rv)L.push([`${rv} việc đã giao chờ duyệt kết quả`,'given']);}
+  const rq=(D.reqs||[]).filter(r=>r.status==='Mới'&&(isAdmin()||reqForMe(r))).length;if(rq)L.push([`${rq} order mới ${isAdmin()?'giữa các team':'gửi đến '+myReqLabel()}`,'reqs']);
   const od=D.tasks.filter(x=>x.status!=='Xong'&&x.due&&x.due<t&&(isAdmin()||x.staffId===ME.id)).length;if(od)L.push([`${od} công việc quá hạn`,isAdmin()?'given':'mytasks']);
-  if(!isAdmin()){const nw=assignedToMe().filter(x=>(x.status||'Cần làm')==='Cần làm').length;if(nw)L.push([`${nw} việc mới được giao cho bạn`,'mytasks']);}
+  if(!isAdmin()){const nw=assignedToMe().filter(x=>(x.status||'Cần làm')==='Cần làm').length;if(nw)L.push([`${nw} việc mới được giao cho bạn`,'mytasks']);
+    const rd=assignedToMe().filter(x=>x.status!=='Xong'&&x.review==='Làm lại').length;if(rd)L.push([`${rd} việc quản lý yêu cầu làm lại`,'mytasks']);
+    if(myReportDue())L.push([`Bạn chưa nộp báo cáo hôm nay (chốt ${HR().reportDeadline||'17:30'})`,'reports']);}
   const fx=(D.worklog||[]).filter(w=>w.staffId===ME.id&&w.approved==='Cần sửa').length;if(fx)L.push([`${fx} công việc cần sửa lại`,'worklog']);
   const myL=D.leaves.filter(l=>l.staffId===ME.id&&l.status&&l.status!=='Chờ duyệt'&&String(l.updatedAt||'')>=addDays(t,-3)).length;if(myL&&!isAdmin())L.push([`${myL} đơn của bạn vừa được xử lý`,'hr']);
   return L.filter(x=>navAllowed(x[1]));}
@@ -2079,7 +2212,7 @@ document.addEventListener('click',async e=>{
   else if(act==='wlok'){const x=(D.worklog||[]).find(w=>w.id===a.dataset.id);if(x){a.disabled=true;await saveQuiet('worklog',x.id,{...x,approved:'Đã duyệt'},'Đã duyệt');}}
   else if(act==='reqst'){const x=(D.reqs||[]).find(r=>r.id===a.dataset.id);if(x){a.disabled=true;await saveQuiet('reqs',x.id,{...x,status:a.dataset.st,assignee:x.assignee||ME.id},a.dataset.st==='Hoàn thành'?'Đã hoàn thành':'Đã nhận việc');}}
   else if(act==='caladd')openForm('tasks',null,{due:a.dataset.d});
-  else if(act==='tkst'){const x=D.tasks.find(t=>t.id===a.dataset.id);if(x){a.disabled=true;await saveQuiet('tasks',x.id,{...x,status:a.dataset.st},a.dataset.st==='Xong'?'Đã báo hoàn thành':'Đã nhận làm');}}
+  else if(act==='tkst'){const x=D.tasks.find(t=>t.id===a.dataset.id);if(x){a.disabled=true;await saveQuiet('tasks',x.id,{...x,status:a.dataset.st,doneAt:a.dataset.st==='Xong'?todayStr():''},a.dataset.st==='Xong'?'Đã báo hoàn thành':'Đã nhận làm');}}
   else if(act==='stquit'){const s=D.staff.find(x=>x.id===a.dataset.id);if(!s)return;const on=isActive(s);if(on&&a.dataset.sure!=='1'){a.dataset.sure='1';a.textContent='Bấm lần nữa';return;}
     a.disabled=true;await saveQuiet('staff',s.id,{...s,status:on?'Đã nghỉ':'Đang làm',endDate:on?todayStr():''},on?'Đã chuyển sang Đã nghỉ':'Đã mở lại tài khoản');}
 },true);
