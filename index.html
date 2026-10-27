@@ -281,6 +281,7 @@ table.pay tfoot td{font-weight:700;border-top:2px solid var(--line)}
 @keyframes nagp{50%{box-shadow:0 0 0 4px var(--warn-soft)}}
 @media (prefers-reduced-motion:reduce){.nag{animation:none}}
 .phonechips .pill{cursor:pointer;border:0}
+.finedet{max-width:860px;width:calc(100vw - 32px);max-height:90vh;overflow:auto;color:var(--ink)}
 .fld[hidden]{display:none}
 .reqbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .reqbtn{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 6px;text-align:center;line-height:1.25;white-space:normal}
@@ -310,7 +311,9 @@ nav.side button.sub{padding-left:26px;font-size:13px;border-left:2px solid var(-
 .tabs{display:flex;flex-wrap:wrap;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:14px;width:fit-content;max-width:100%}
 .tabs button{border:0;background:none;padding:8px 14px;border-radius:8px;font-weight:600;color:var(--muted);cursor:pointer}
 .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.permbox{display:grid;gap:6px}.chk{display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)!important;font-size:13.5px!important}
+.permbox{display:grid;gap:6px}
+.commbox{display:grid;gap:8px}.commsel{display:flex;gap:8px;flex-wrap:wrap}.commsel select{flex:1 1 220px}.commbox [hidden]{display:none!important}
+.tiertab{width:100%;border-collapse:collapse}.tiertab th{font-size:12px;font-weight:600;text-align:left;color:var(--muted);padding:2px 4px}.tiertab td{padding:3px 4px}.tiertab td:last-child{width:30px;text-align:center}.tiertab input{width:100%}.chk{display:flex;gap:8px;align-items:center;font-weight:500;color:var(--ink)!important;font-size:13.5px!important}
 .prog{position:relative;height:10px;background:var(--sunk);border-radius:99px;overflow:visible;margin:8px 0 4px}.prog>span{display:block;height:100%;border-radius:99px;background:var(--accent)}.prog>i{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--muted)}
 .prog.bad>span{background:var(--bad)}.prog.warn>span{background:var(--warn)}.prog.good>span{background:var(--good)}
 .chg{font-size:12px;font-weight:700;padding:2px 7px;border-radius:99px;display:inline-block}.chg.up{background:var(--good-soft);color:var(--good)}.chg.down{background:var(--bad-soft);color:var(--bad)}
@@ -509,13 +512,18 @@ const REQ_LABEL={'Nghỉ việc':{from:'Ngày làm việc cuối cùng',reason:'
   'Quên chấm công':{from:'Ngày quên chấm',timeIn:'Giờ vào thực tế',timeOut:'Giờ ra thực tế'},
   'Tăng ca':{from:'Ngày tăng ca',hours:'Số giờ tăng ca',reason:'Nội dung công việc'},
   'Công tác':{from:'Đi từ ngày',to:'Về ngày',reason:'Nơi công tác / nội dung'}};
-const ADJ_TYPES=['Thưởng','Phụ cấp','Phạt','Ứng lương'];
+const ECOM_T='Số liệu sàn TMĐT';
+const ADJ_TYPES=['Thưởng','Phụ cấp','Phạt','Ứng lương',ECOM_T];
+/* Hoa hồng theo bậc: commTiers = "mốc:%|mốc:%" (rev: doanh số từ mốc ₫; cost: % chi phí sàn dưới mốc) */
+const COMM_MODES=[['','Cố định % doanh thu (+ % khi vượt KPI)'],['rev','Theo bậc doanh số tháng'],['cost','Theo bậc % chi phí sàn TMĐT']];
+const COMM_DEF={rev:'0:2|300000000:3',cost:'35:2.5|38:2|40:1.5'};
 const CARE_RESULTS=['Đã gọi - sẽ mua lại','Đã gọi - chưa có nhu cầu','Không nghe máy','Đã chốt đơn mới','Khác'];
 
 const FIELDS={
   staff:[{k:'code',l:'Mã nhân viên',t:'text',ph:'VD: NV001'},{k:'name',l:'Họ tên',t:'text',req:1},{k:'dept',l:'Phòng ban',t:'sel',o:DEPTS,d:'',blank:'— Chọn phòng ban —'},{k:'team',l:'Team',t:'team'},{k:'role',l:'Vai trò',t:'sel',o:ROLES},
     {k:'username',l:'Tên đăng nhập',t:'text',req:1,ph:'VD: khanhdk'},{k:'pin',l:'Mật khẩu (tối thiểu 4 ký tự)',t:'text',req:1,ph:'VD: Mdd@2026'},
     {k:'perms',l:'Cấp thêm quyền xem (ngoài quyền theo phòng ban)',t:'perms',wide:1},{k:'baseSalary',l:'Lương cứng / tháng (₫)',t:'num'},
+    {k:'commMode',l:'Cách tính hoa hồng',t:'comm',wide:1},
     {k:'commission',l:'Hoa hồng (% doanh thu)',t:'num',step:'0.1'},{k:'commissionBonus',l:'Hoa hồng khi vượt KPI doanh thu (%)',t:'num',step:'0.1'},
     {k:'kpiOrders',l:'KPI số đơn / tháng',t:'num'},{k:'kpiRevenue',l:'KPI doanh thu / tháng (₫)',t:'num'},{k:'kpiVideos',l:'KPI số video / bài / tháng',t:'num'},{k:'kpiViews',l:'KPI lượt view / tháng',t:'num'},
     {k:'phone',l:'Số điện thoại',t:'text'},{k:'startDate',l:'Ngày vào làm',t:'date'},{k:'birthday',l:'Ngày sinh',t:'date'},
@@ -541,7 +549,7 @@ FIELDS.mktplan=[{k:'month',l:'Tháng',t:'month',req:1},{k:'adsBudget',l:'Ngân s
 FIELDS.leaves=[{k:'staffId',l:'Người làm đơn',t:'staff',req:1},{k:'type',l:'Loại đơn',t:'sel',o:LEAVE_TYPES},{k:'from',l:'Từ ngày',t:'date',req:1},{k:'to',l:'Đến ngày',t:'date',req:1,hide:ONE_DAY},
   {k:'timeIn',l:'Giờ vào',t:'time',only:['Đi muộn / về sớm','Quên chấm công']},{k:'timeOut',l:'Giờ ra',t:'time',only:['Đi muộn / về sớm','Quên chấm công']},{k:'hours',l:'Số giờ',t:'num',step:'0.5',only:['Tăng ca']},
   {k:'reason',l:'Lý do',t:'area',wide:1},{k:'status',l:'Trạng thái',t:'sel',o:['Chờ duyệt','Đã duyệt','Từ chối']}];
-FIELDS.payadj=[{k:'month',l:'Tháng',t:'month',req:1},{k:'staffId',l:'Nhân viên',t:'staff',req:1},{k:'type',l:'Khoản',t:'sel',o:ADJ_TYPES},{k:'amount',l:'Số tiền (₫)',t:'num',req:1},{k:'note',l:'Lý do',t:'area',wide:1}];
+FIELDS.payadj=[{k:'month',l:'Tháng',t:'month',req:1},{k:'staffId',l:'Nhân viên',t:'staff',req:1},{k:'type',l:'Khoản',t:'sel',o:ADJ_TYPES},{k:'amount',l:'Số tiền (₫)',t:'num',req:1},{k:'rev',l:'Doanh thu sàn trong tháng (₫)',t:'num'},{k:'note',l:'Lý do',t:'area',wide:1}];
 FIELDS.attendance=[{k:'date',l:'Ngày',t:'date',req:1},{k:'staffId',l:'Nhân viên',t:'staff',req:1},{k:'checkIn',l:'Giờ vào (HH:mm)',t:'text',ph:'08:30'},{k:'checkOut',l:'Giờ ra (HH:mm)',t:'text',ph:'17:30'},{k:'note',l:'Ghi chú',t:'area',wide:1},{k:'locIn',l:'Vị trí lúc vào',t:'text',map:1},{k:'locOut',l:'Vị trí lúc ra',t:'text',map:1},{k:'photoIn',l:'Ảnh lúc vào',t:'photo'},{k:'photoOut',l:'Ảnh lúc ra',t:'photo'}];
 FIELDS.shifts=[{k:'name',l:'Tên ca',t:'text',req:1,ph:'VD: Ca sáng'},{k:'start',l:'Giờ vào',t:'time',req:1},{k:'end',l:'Giờ ra',t:'time',req:1},
   {k:'breakMin',l:'Nghỉ trưa (phút)',t:'num',d:60},{k:'graceMin',l:'Cho phép muộn (phút)',t:'num',d:0}];
@@ -601,8 +609,8 @@ function calc(){
   const byCat={}; exps.forEach(e=>{const c=e.category||'Khác';byCat[c]=(byCat[c]||0)+(+e.amount||0)}); if(adsSpend) byCat['Quảng cáo Facebook (tự động)']=adsSpend;
   const views=D.views.filter(inMonth).concat(D.posts.filter(inMonth).map(p=>({...p,auto:true}))), viewTotal=sum(views,'views');
   const people=D.staff.filter(s=>isActive(s)||valid.some(o=>o.staffId===s.id)).map(s=>{const my=valid.filter(o=>o.staffId===s.id), rev=sum(my,'amount'), vids=views.filter(v=>v.staffId===s.id);
-    const all=orders.filter(o=>o.staffId===s.id);
-    return {s,orders:my.length,allOrders:all.length,cancelled:all.length-my.length,rev,videos:vids.length,views:sum(vids,'views'),...payFor(s,rev)}});
+    const all=orders.filter(o=>o.staffId===s.id), revDone=sum(my.filter(o=>o.status==='Thành công'),'amount');
+    return {s,orders:my.length,allOrders:all.length,cancelled:all.length-my.length,rev,revDone,videos:vids.length,views:sum(vids,'views'),...payFor(s,rev,revDone)}});
   const payroll=people.reduce((t,p)=>t+p.pay,0);
   return {adsM,adsSpend,orders,valid,revenue,done,exps,expTotal,byCat,views,viewTotal,people,payroll,salHid:people.some(p=>p.hid),profit:revenue-expTotal-payroll,cancelled:orders.length-valid.length};
 }
@@ -899,7 +907,7 @@ function vKpi(){
 function vStaff(){
   return `<div class="toolbar"><span class="muted">Mỗi người đăng nhập bằng mã PIN riêng. Quyền "Quản lý" xem được tiền, lương và sửa mọi dữ liệu. Người nghỉ việc: bấm vào tên → Trạng thái <b>Đã nghỉ</b> (giữ lại lịch sử công, lương) hoặc bấm <b>Xóa</b> để xóa hẳn.</span><span class="spacer"></span>${addBtn('staff')}</div>
   <div class="tablewrap"><table><thead><tr><th>Mã NV</th><th>Họ tên</th><th>Phòng ban</th><th>Quyền</th><th>Mã PIN</th><th class="num">Lương cứng</th><th class="num">Hoa hồng</th><th class="num">KPI đơn</th><th class="num">KPI doanh thu</th><th class="num">KPI video</th><th class="num">KPI view</th></tr></thead>
-   <tbody>${[...D.staff].sort((a,b)=>(isActive(b)-isActive(a))||String(a.code||'~').localeCompare(String(b.code||'~'))||String(a.name||'').localeCompare(String(b.name||''),'vi')).map(s=>`<tr class="row" data-act="edit" data-col="staff" data-id="${s.id}"${isActive(s)?'':' style="opacity:.55"'}><td class="muted">${esc(s.code||'—')}</td><td><b>${esc(s.name)}</b>${s.id===ME.id?' <span class="pill acc">Bạn</span>':''}${isActive(s)?(s.remote==='Có'?' <span class="pill">Làm ngoài</span>':''):` <span class="pill bad">Đã nghỉ${s.endDate?' '+dmy(s.endDate):''}</span>`}</td><td>${esc(s.dept||'—')}</td><td>${esc(s.role)}</td><td class="muted">${esc(s.pin)}</td><td class="num">${SAL?vnd((SAL[s.id]||{}).baseSalary):STARS}</td><td class="num">${nf(s.commission||0)}%</td><td class="num">${nf(s.kpiOrders)}</td><td class="num">${short(s.kpiRevenue)}</td><td class="num">${nf(s.kpiVideos)}</td><td class="num">${short(s.kpiViews)}</td></tr>`).join('')}</tbody></table></div>`;
+   <tbody>${[...D.staff].sort((a,b)=>(isActive(b)-isActive(a))||String(a.code||'~').localeCompare(String(b.code||'~'))||String(a.name||'').localeCompare(String(b.name||''),'vi')).map(s=>`<tr class="row" data-act="edit" data-col="staff" data-id="${s.id}"${isActive(s)?'':' style="opacity:.55"'}><td class="muted">${esc(s.code||'—')}</td><td><b>${esc(s.name)}</b>${s.id===ME.id?' <span class="pill acc">Bạn</span>':''}${isActive(s)?(s.remote==='Có'?' <span class="pill">Làm ngoài</span>':''):` <span class="pill bad">Đã nghỉ${s.endDate?' '+dmy(s.endDate):''}</span>`}</td><td>${esc(s.dept||'—')}</td><td>${esc(s.role)}</td><td class="muted">${esc(s.pin)}</td><td class="num">${SAL?vnd((SAL[s.id]||{}).baseSalary):STARS}</td><td class="num">${esc(commLabel(s))}</td><td class="num">${nf(s.kpiOrders)}</td><td class="num">${short(s.kpiRevenue)}</td><td class="num">${nf(s.kpiVideos)}</td><td class="num">${short(s.kpiViews)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 
@@ -1080,7 +1088,23 @@ function monthDays(from,to){
   if(!from) return 0; to=to||from;
   return monthDaysList().filter(ds=>ds>=from&&ds<=to).length;
 }
-function payFor(s,rev){
+const nf1=n=>new Intl.NumberFormat('vi-VN',{maximumFractionDigits:2}).format(+n||0);
+function parseTiers(t){return String(t||'').split('|').map(x=>x.split(':').map(Number)).filter(([x,r])=>isFinite(x)&&isFinite(r)).map(([x,r])=>({x,r})).sort((a,b)=>a.x-b.x);}
+function parseMoney(s){s=String(s||'').toLowerCase().replace(/\s/g,'');const m=s.match(/^([\d.,]+)(tr|triệu|trieu|ty|tỷ|tỉ|k|nghìn|ngàn)?$/);if(!m)return NaN;
+  const n=m[2]?+m[1].replace(',','.'):+m[1].replace(/[.,]/g,'');return Math.round(n*({tr:1e6,'triệu':1e6,trieu:1e6,ty:1e9,'tỷ':1e9,'tỉ':1e9,k:1e3,'nghìn':1e3,'ngàn':1e3}[m[2]]||1));}
+const ecomOf=sid=>(D.payadj||[]).find(x=>x.staffId===sid&&x.month===S.month&&x.type===ECOM_T);
+function commLabel(s){const m=s.commMode||'';if(!m)return nf1(s.commission||0)+'%';return (m==='cost'?'Theo CP sàn ':'Bậc DS ')+parseTiers(s.commTiers).map(x=>nf1(x.r)+'%').join(' / ');}
+/* Trả về % hoa hồng và số tiền làm căn cứ tính */
+function commFor(v,rev,revDone,sid){
+  const mode=v.commMode||'', base=v.commBase==='done'?revDone:rev, onDone=v.commBase==='done'?' · tính trên đơn thành công':'';
+  if(mode==='rev'){const t=parseTiers(v.commTiers).filter(x=>base>=x.x).pop();
+    return {mode,rate:t?t.r:0,comBase:base,tier:false,comNote:(t?'Bậc doanh số'+(t.x?' từ '+short(t.x):''):'Chưa đạt mốc doanh số')+onDone};}
+  if(mode==='cost'){const e=ecomOf(sid), b=e&&+e.rev?+e.rev:rev, pc=e&&b?(+e.amount||0)/b*100:null, t=pc==null?null:parseTiers(v.commTiers).find(x=>pc<x.x);
+    return {mode,rate:t?t.r:0,comBase:b,tier:false,costPct:pc,comNote:pc==null?'Chưa nhập số liệu sàn tháng này':`Chi phí sàn ${nf1(pc)}%${t?'':' (vượt mốc, không có HH)'}`};}
+  const tier=!!(+v.commissionBonus&&+v.kpiRevenue&&base>=+v.kpiRevenue);
+  return {mode,rate:tier?+v.commissionBonus:(+v.commission||0),comBase:base,tier,comNote:onDone.slice(3)};
+}
+function payFor(s,rev,revDone){
   const h=HR(), M=monthSum(s.id), sv=salOf(s), hid=!sv, v=sv||s;
   const std=+h.stdDays||26, base=hid?0:(+v.baseSalary||0);
   // Theo công: (công + nghỉ có lương) / công chuẩn. Đủ lương cứng: trừ ngày nghỉ không lương.
@@ -1089,15 +1113,15 @@ function payFor(s,rev){
   const lateFine=Math.round(M.lateFineMin*(+h.lateRate||0)), earlyFine=Math.round(M.earlyMin*(+h.earlyRate||0)), timeFine=lateFine+earlyFine;
   const adj=(D.payadj||[]).filter(x=>x.staffId===s.id&&x.month===S.month), st=t=>sum(adj.filter(x=>x.type===t),'amount');
   const bonus=st('Thưởng'), allow=st('Phụ cấp')+otPay, fine=st('Phạt'), adv=st('Ứng lương');
-  const tier=+v.commissionBonus&&+v.kpiRevenue&&rev>=+v.kpiRevenue, rate=tier?+v.commissionBonus:(+v.commission||0), com=Math.round(rev*rate/100);
+  const C=commFor(v,rev,revDone==null?rev:revDone,s.id), rate=C.rate, tier=C.tier, com=Math.round(C.comBase*rate/100);
   const net=baseEarned+com+bonus+allow-fine-timeFine-adv;
-  return {hid,work:M.cong,late:M.lateN,lateMin:M.lateMin,earlyN:M.earlyN,earlyMin:M.earlyMin,lateFine,earlyFine,timeFine,ot:M.ot,otPay,paidLeave:M.paidLeave,unpaidLeave:M.unpaidLeave,absent:M.absent,base,baseEarned,com,rate,tier,bonus,allow,fine,adv,net,pay:net+adv};
+  return {...C,hid,work:M.cong,late:M.lateN,lateMin:M.lateMin,earlyN:M.earlyN,earlyMin:M.earlyMin,lateFine,earlyFine,timeFine,ot:M.ot,otPay,paidLeave:M.paidLeave,unpaidLeave:M.unpaidLeave,absent:M.absent,base,baseEarned,com,rate,tier,bonus,allow,fine,adv,net,pay:net+adv};
 }
 function payrollTable(list){
   const h=HR(), anyHid=list.some(p=>p.hid), m=(v,p)=>p.hid?STARS:short(v), tot=k=>list.reduce((t,p)=>t+(+p[k]||0),0);
   const minus=v=>v?'−'+short(v):'–';
   return `${anyHid||SAL?salBar():''}<div class="tablewrap paywrap"><table class="pay"><thead><tr><th>Nhân viên</th><th class="num">Ngày công</th><th class="num">Lương cứng</th><th class="num">Lương theo công</th><th class="num">Hoa hồng</th><th class="num">Thưởng · PC · tăng ca</th><th class="num">Trừ muộn / sớm</th><th class="num">Phạt · ứng</th><th class="num">Thực nhận</th></tr></thead>
-    <tbody>${list.map(p=>`<tr><td><b>${esc(p.s.name)}</b><div class="small muted">${esc(p.s.dept||'')}${p.rate?` · HH ${nf(p.rate)}% × ${short(p.rev)}`:''}${p.tier?' <span class="pill good">vượt KPI</span>':''}</div></td>
+    <tbody>${list.map(p=>`<tr><td><b>${esc(p.s.name)}</b>${p.timeFine?` <button type="button" class="linkbtn small" data-act="finedet" data-sid="${p.s.id}">Chi tiết trừ</button>`:''}<div class="small muted">${esc(p.s.dept||'')}${p.rate?` · HH ${nf1(p.rate)}% × ${short(p.comBase)}`:''}${p.tier?' <span class="pill good">vượt KPI</span>':''}</div>${p.comNote?`<div class="small muted">${esc(p.comNote)}</div>`:''}${p.mode==='cost'&&canEdit('payadj')?`<button type="button" class="linkbtn small" data-act="ecomset" data-sid="${p.s.id}">${ecomOf(p.s.id)?'Sửa':'Nhập'} số liệu sàn</button>`:''}</td>
       <td class="num"><b>${p.work}</b>${p.paidLeave?`<span class="muted">+${p.paidLeave}P</span>`:''}<span class="muted">/${h.stdDays}</span>${p.unpaidLeave?`<div class="small warnc">${p.unpaidLeave} ngày nghỉ KL</div>`:''}${p.absent?`<div class="small neg">${p.absent} ngày vắng</div>`:''}</td>
       <td class="num">${m(p.base,p)}</td><td class="num">${m(p.baseEarned,p)}</td><td class="num">${short(p.com)}</td>
       <td class="num">${short(p.bonus+p.allow)}${p.otPay?`<div class="small muted">tăng ca ${p.ot}h</div>`:''}</td>
@@ -1267,7 +1291,7 @@ function vHr(){
       <div class="small muted" style="margin-top:6px">Ca của bạn: ${esc(sh.name)} ${esc(sh.start)}–${esc(sh.end)}. Quên chấm hoặc máy lỗi? Bấm “Quên chấm công” ở trên để gửi đơn.</div>
       <div style="margin-top:10px"><button class="btn" data-act="attexport" data-me="1">Tải phiếu công của tôi (Excel)</button></div></div>`;
   }
-  if(me&&!isAdmin()&&(+me.baseSalary||+me.commission)){const p=calc().people.find(x=>x.s.id===ME.id); if(p) html+=`<div class="panel" style="margin-top:14px"><h2>Lương tạm tính tháng ${ml}</h2>${payrollTable([p])}<div class="small muted" style="margin-top:6px">Số tạm tính theo dữ liệu hiện tại, chốt cuối tháng theo quản lý.</div></div>`;}
+  if(me&&!isAdmin()&&(+me.baseSalary||+me.commission||me.commMode)){const p=calc().people.find(x=>x.s.id===ME.id); if(p) html+=`<div class="panel" style="margin-top:14px"><h2>Lương tạm tính tháng ${ml}</h2>${payrollTable([p])}<div class="small muted" style="margin-top:6px">Số tạm tính theo dữ liệu hiện tại, chốt cuối tháng theo quản lý.</div></div>`;}
   if(!isAdmin()){ if(!can('hr')) return html;
     return html+`<div class="panel" style="margin-top:20px"><h2>Chấm công hôm nay</h2>${todayBoard()}</div>
     <div class="toolbar" style="margin-top:20px"><h2 style="margin:0">Bảng chấm công tháng ${ml}${lockBadge}</h2><span class="spacer"></span>
@@ -1331,6 +1355,23 @@ function vHr(){
   </div>
   <div style="margin-top:10px"><button class="btn primary" data-act="salset">${FLAGS.salCode?'Đổi mã xem lương':'Lưu mã xem lương'}</button></div></div>`;
   return html;
+}
+/* Chi tiết tiền trừ đi muộn / về sớm từng ngày của 1 người (bấm "Chi tiết trừ" trong bảng lương) */
+function fineDetail(sid){
+  const h=HR(), M=monthSum(sid), days=monthDaysList(), lr=+h.lateRate||0, er=+h.earlyRate||0;
+  const rows=M.st.map((x,i)=>({x,ds:days[i],lf:lateFineMin(x.late)})).filter(o=>o.x.late||o.x.early);
+  const tl=rows.reduce((t,o)=>t+o.lf*lr,0), te=rows.reduce((t,o)=>t+(o.x.early||0)*er,0);
+  const ov=document.createElement('div');ov.className='photo-ov';
+  ov.innerHTML=`<div class="panel finedet"><div class="toolbar" style="margin:0 0 8px"><h2 style="margin:0">Chi tiết trừ muộn / sớm · ${esc(staffName(sid))} · tháng ${S.month.slice(5)}</h2><span class="spacer"></span><button class="btn" data-fd="x">Đóng</button></div>
+    <div class="small muted" style="margin-bottom:8px">Muộn quá ${+h.lateFreeMin||0}′ mới phạt, ${nf(lr)} ₫/phút ${h.lateFineMode==='all'?'(tính cả số phút)':'(chỉ phần vượt)'} · về sớm ${nf(er)} ₫/phút. Đơn “Đi muộn / về sớm” đã duyệt: không trừ.</div>
+    <div class="tablewrap" style="max-height:60vh;overflow:auto"><table><thead><tr><th>Ngày</th><th>Vào – Ra</th><th class="num">Muộn</th><th class="num">Phút bị phạt</th><th class="num">Trừ muộn</th><th class="num">Về sớm</th><th class="num">Trừ sớm</th><th class="num">Công</th></tr></thead>
+    <tbody>${rows.map(o=>`<tr><td>${dmy(o.ds)} ${['CN','T2','T3','T4','T5','T6','T7'][new Date(o.ds+'T00:00:00').getDay()]}</td><td>${esc(o.x.a.checkIn||'—')} – ${esc(o.x.a.checkOut||'—')}</td>
+      <td class="num">${o.x.late?o.x.late+'′':'–'}</td><td class="num">${o.lf?o.lf+'′':'<span class="muted">0 (dưới '+(+h.lateFreeMin||0)+'′)</span>'}</td><td class="num ${o.lf?'neg':''}">${o.lf?'−'+nf(o.lf*lr):'–'}</td>
+      <td class="num">${o.x.early?o.x.early+'′':'–'}</td><td class="num ${o.x.early&&er?'neg':''}">${o.x.early&&er?'−'+nf(o.x.early*er):'–'}</td><td class="num">${o.x.cong}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Không có ngày nào đi muộn / về sớm.</td></tr>'}</tbody>
+    <tfoot><tr><td colspan="2">Tổng</td><td class="num">${M.lateMin}′</td><td class="num">${M.lateFineMin}′</td><td class="num neg">−${nf(tl)}</td><td class="num">${M.earlyMin}′</td><td class="num neg">${te?'−'+nf(te):'–'}</td><td></td></tr></tfoot></table></div>
+    <div style="margin-top:8px"><b>Tổng trừ: ${nf(tl+te)} ₫</b></div></div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov||e.target.closest('[data-fd]'))ov.remove();});
+  document.body.appendChild(ov);
 }
 /* Bảng lương trong mục Nhân sự (quản lý + phòng Nhân sự), lương cứng ẩn tới khi nhập mã */
 function payPanel(){
@@ -1726,6 +1767,8 @@ function openForm(col,id,preset){
     else if(f.t==='opts') inp=`<select id="${id}" name="${f.k}"${ro}>${f.opts.map(([k,l])=>`<option value="${esc(k)}" ${k===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
     else if(f.t==='team'){const dp=rec?rec.dept:(preset&&preset.dept)||''; inp=`<select id="${id}" name="${f.k}"${ro}>${teamOpts(dp,v)}</select>`;}
     else if(f.t==='teamsel'){const oth=DEPTS.filter(d=>!TEAMS[d]);inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn team / phòng nhận —</option>${Object.keys(TEAMS).map(d=>`<optgroup label="${esc(d)}">${TEAMS[d].map(t=>`<option ${t===v?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`).join('')}${oth.length?`<optgroup label="Phòng ban khác">${oth.map(t=>`<option ${t===v?'selected':''}>${esc(t)}</option>`).join('')}</optgroup>`:''}</select>`;}
+    else if(f.t==='comm'){const r=rec||{},m=r.commMode||'';inp=`<div class="commbox"><div class="commsel"><select id="${id}" name="commMode"${ro}>${COMM_MODES.map(([k,l])=>`<option value="${k}" ${k===m?'selected':''}>${esc(l)}</option>`).join('')}</select>
+      <select name="commBase"${ro}><option value="">Tính trên đơn chưa hủy (doanh số)</option><option value="done" ${r.commBase==='done'?'selected':''}>Chỉ đơn Thành công (tiền đã thu về)</option></select></div><div class="tiers">${tierRows(m,m?(r.commTiers||COMM_DEF[m]):'',ro)}</div></div>`;}
     else if(f.t==='perms'){const on=String(v||'').split(',');inp=`<div class="permbox">${PERMS.map(([k,l])=>`<label class="chk"><input type="checkbox" name="perms_${k}" value="${k}" ${on.includes(k)?'checked':''}${ro}> ${esc(l)}</label>`).join('')}<div class="small muted">Mặc định: phòng Marketing xem chỉ số MKT, phòng Kinh doanh xem doanh thu, phòng Nhân sự xem chấm công. Tick để cấp thêm cho người cần.</div></div>`;}
     else if(f.t==='chan'){const list=(D.kenh||[]).filter(c=>c.active!=='Không'||c.id===v);inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn kênh —</option>${CH_GROUPS.map(g=>{const cs=list.filter(c=>c.group===g.k);return cs.length?`<optgroup label="${esc(g.l)}">${cs.map(c=>`<option value="${c.id}" ${c.id===v?'selected':''}>${esc(c.name)}</option>`).join('')}</optgroup>`:'';}).join('')}</select>`;}
     else if(f.t==='staff') inp=`<select id="${id}" name="${f.k}"${ro}><option value="">— Chọn —</option>${staffFor(v).map(s=>`<option value="${s.id}" ${s.id===v?'selected':''}>${esc(s.name)}</option>`).join('')}</select>`;
@@ -1741,6 +1784,12 @@ function openForm(col,id,preset){
   document.getElementById('modal').hidden=false;
   setTimeout(()=>{const first=wrap.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled])');first&&first.focus()},30);
 }
+function tierRow(m,x,ro){const xv=x.x===''?'':m==='cost'?x.x:nf(x.x);
+  return `<tr><td><input name="tier_x" ${m==='cost'?'type="number" step="any" min="0" inputmode="decimal"':'type="text" inputmode="decimal" placeholder="VD: 300tr"'} value="${esc(xv)}"${ro}></td><td><input name="tier_r" type="number" step="any" min="0" inputmode="decimal" value="${esc(x.r)}"${ro}></td><td>${ro?'':'<button type="button" class="linkbtn" data-tier="del" title="Xóa mốc">✕</button>'}</td></tr>`;}
+function tierRows(m,t,ro){if(!m)return '';const cost=m==='cost';
+  return `<table class="tiertab"><thead><tr><th>${cost?'Chi phí sàn dưới (%)':'Doanh số từ (₫)'}</th><th>Hoa hồng (%)</th><th></th></tr></thead><tbody>${parseTiers(t).map(x=>tierRow(m,x,ro)).join('')}</tbody></table>
+  ${ro?'':'<button type="button" class="btn" data-tier="add">+ Thêm mốc</button>'}
+  <div class="small muted" style="margin-top:6px">${cost?'Ví dụ: dưới 35% → 2,5%; dưới 38% → 2%; dưới 40% → 1,5%. Chi phí sàn từ mốc cuối trở lên thì không có hoa hồng. Hoa hồng = % × doanh thu sàn. Hằng tháng nhập Doanh thu sàn và Chi phí sàn ở Bảng lương → “Nhập số liệu sàn”. Không cần đặt KPI đơn / doanh thu.':'Đạt mốc nào thì cả doanh số tháng tính theo % của mốc đó. Ví dụ: từ 0 → 2%; từ 300tr → 3%. Gõ được dạng 300tr, 1,5 tỷ.'}</div>`;}
 function reqShape(){
   const ty=document.getElementById('f_type'); if(!ty) return; const t=ty.value, lb=REQ_LABEL[t]||{};
   FIELDS.leaves.forEach(f=>{const box=document.querySelector(`#form-fields .fld[data-k="${f.k}"]`); if(!box) return;
@@ -1756,6 +1805,12 @@ document.getElementById('form').addEventListener('submit',async e=>{
   const {col,id}=editing, fm=e.target, obj={};
   for(const f of FIELDS[col]){
     if(f.t==='perms'){obj[f.k]=PERMS.map(([k])=>k).filter(k=>fm.elements['perms_'+k]&&fm.elements['perms_'+k].checked).join(',');continue;}
+    if(f.t==='comm'){const m=fm.elements.commMode.value,xs=[...fm.querySelectorAll('[name=tier_x]')],rs=[...fm.querySelectorAll('[name=tier_r]')],t=[];
+      for(let i=0;i<xs.length;i++){const a=xs[i].value.trim(),b=rs[i].value.trim();if(a===''&&b==='')continue;
+        const x=m==='cost'?Number(a.replace(',','.')):parseMoney(a),r=Number(b.replace(',','.'));
+        if(a===''||b===''||!isFinite(x)||x<0||!isFinite(r)||r<0){formErr(`Mốc hoa hồng dòng ${i+1} chưa đúng (nhập đủ mốc và %).`);xs[i].focus();return;}t.push(x+':'+r);}
+      if(m&&!t.length){formErr('Thêm ít nhất 1 mốc hoa hồng.');return;}
+      obj.commMode=m;obj.commBase=m==='cost'?'':fm.elements.commBase.value;obj.commTiers=m?t.join('|'):'';continue;}
     const el=fm.elements[f.k];if(!el)continue;if(col==='staff'&&f.k==='baseSalary'&&!SAL)continue; // lương đang ẩn: giữ nguyên lương cũ
     let v=el.value.trim();const hid=!!el.closest('.fld[hidden]');if(hid&&f.t!=='num')v='';
     if(f.req&&v===''&&!hid){formErr(`Vui lòng nhập "${f.l}".`);el.focus();return;}
@@ -1855,6 +1910,8 @@ document.addEventListener('click',async e=>{
       IMP=null;apply(res);toast('Đã nhập '+nf(total)+' ngày công');}catch(err){toast(msg(err));a.disabled=false;a.textContent='Thử lại';}}
   else if(act==='hrsave'){const g=id=>document.getElementById(id).value;
     await act_(a,'saveHrSettings',[{workStart:g('hr-start'),workEnd:g('hr-end'),breakMin:g('hr-brk'),graceMin:g('hr-grace'),stdDays:g('hr-std'),offDays:g('hr-off'),payByAttendance:g('hr-pay')==='1',otRate:g('hr-ot'),lateRate:g('hr-late'),lateFreeMin:g('hr-lfree'),lateFineMode:g('hr-lmode'),earlyRate:g('hr-early'),careDays:g('hr-care'),reportDeadline:g('hr-rpt'),gpsRequired:g('hr-gps')==='1',radius:g('hr-rad'),officeLat:g('hr-lat').trim(),officeLng:g('hr-lng').trim()}],'Đã lưu cài đặt');}
+  else if(act==='finedet')fineDetail(a.dataset.sid);
+  else if(act==='ecomset'){const x=ecomOf(a.dataset.sid);x?openForm('payadj',x.id):openForm('payadj',null,{staffId:a.dataset.sid,type:ECOM_T,month:S.month});}
   else if(act==='nagon'){try{const p=await Notification.requestPermission();toast(p==='granted'?'Đã bật thông báo nhắc chấm công':'Trình duyệt chưa cho phép thông báo');}catch(_){toast('Thiết bị này không hỗ trợ thông báo');}render();}
   else if(act==='salopen')await salOpen(a);
   else if(act==='sallock'){salLock();render();toast('Đã ẩn lương');}
@@ -1952,7 +2009,17 @@ const FORM_HOOKS={
     shape();sel&&sel.addEventListener('change',shape);},
   staff(rec){const d=document.getElementById('f_dept'),t=document.getElementById('f_team'),n=document.getElementById('f_name'),u=document.getElementById('f_username');
     d&&t&&d.addEventListener('change',()=>{t.innerHTML=teamOpts(d.value,t.value);});
-    if(!rec&&n&&u){n.addEventListener('input',()=>{if(!u.dataset.touched)u.value=slugUser(n.value);});u.addEventListener('input',()=>u.dataset.touched='1');}}
+    if(!rec&&n&&u){n.addEventListener('input',()=>{if(!u.dataset.touched)u.value=slugUser(n.value);});u.addEventListener('input',()=>u.dataset.touched='1');}
+    const cb=document.querySelector('#form-fields .commbox');if(!cb)return;const sel=cb.querySelector('[name=commMode]'),tw=cb.querySelector('.tiers');
+    const shape=()=>{const m=sel.value;['commission','commissionBonus'].forEach(k=>{const b=document.querySelector(`#form-fields .fld[data-k="${k}"]`);if(b)b.hidden=!!m;});cb.querySelector('[name=commBase]').hidden=m==='cost';};
+    sel.addEventListener('change',()=>{tw.innerHTML=tierRows(sel.value,COMM_DEF[sel.value]||'','');shape();});
+    tw.addEventListener('click',e=>{const b=e.target.closest('[data-tier]');if(!b)return;if(b.dataset.tier==='del')b.closest('tr').remove();else tw.querySelector('tbody').insertAdjacentHTML('beforeend',tierRow(sel.value,{x:'',r:''},''));});
+    shape();},
+  payadj(){const ty=document.getElementById('f_type'),q=k=>document.querySelector(`#form-fields .fld[data-k="${k}"]`);
+    const shape=()=>{const e=ty&&ty.value===ECOM_T,rv=q('rev'),am=q('amount'),nt=q('note');if(rv)rv.hidden=!e;
+      if(am){const l=am.querySelector('label');l.textContent=(e?'Chi phí sàn trong tháng (₫)':l.dataset.base)+' *';}
+      if(nt){const l=nt.querySelector('label');l.textContent=e?'Ghi chú (sàn nào, nguồn số liệu…)':l.dataset.base;}};
+    shape();ty&&ty.addEventListener('change',shape);}
 };
 const FORM_CHECK={
   chrep(o){const c=chanOf(o.channelId);if(!c)return 'Chọn kênh.';if(isAdmin()&&!o.staffId)o.staffId=c.staffId||'';return '';},
