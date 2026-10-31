@@ -516,7 +516,8 @@ const CARE_RESULTS=['Đã gọi - sẽ mua lại','Đã gọi - chưa có nhu c�
 const FIELDS={
   staff:[{k:'code',l:'Mã nhân viên',t:'text',ph:'VD: NV001'},{k:'name',l:'Họ tên',t:'text',req:1},{k:'dept',l:'Phòng ban',t:'sel',o:DEPTS,d:'',blank:'— Chọn phòng ban —'},{k:'team',l:'Team',t:'team'},{k:'role',l:'Vai trò',t:'sel',o:ROLES},
     {k:'username',l:'Tên đăng nhập',t:'text',req:1,ph:'VD: khanhdk'},{k:'pin',l:'Mật khẩu (tối thiểu 4 ký tự)',t:'text',req:1,ph:'VD: Mdd@2026'},
-    {k:'perms',l:'Cấp thêm quyền xem (ngoài quyền theo phòng ban)',t:'perms',wide:1},{k:'baseSalary',l:'Lương cứng / tháng (₫)',t:'num'},
+    {k:'perms',l:'Cấp thêm quyền xem (ngoài quyền theo phòng ban)',t:'perms',wide:1},{k:'baseSalary',l:'Lương cứng / tháng (₫)',t:'num'},{k:'position',l:'Chức danh',t:'text',ph:'VD: Nhân viên, Leader'},
+    {k:'bhxhSalary',l:'Lương đóng BHXH (₫)',t:'num'},{k:'allowanceFixed',l:'Phụ cấp kiêm nhiệm / tháng (₫)',t:'num'},{k:'unionFee',l:'Công đoàn / tháng (₫)',t:'num'},{k:'dependents',l:'Số người phụ thuộc (tính thuế)',t:'num',step:'1'},
     {k:'commission',l:'Hoa hồng (% doanh thu)',t:'num',step:'0.1'},{k:'commissionBonus',l:'Hoa hồng khi vượt KPI doanh thu (%)',t:'num',step:'0.1'},
     {k:'kpiOrders',l:'KPI số đơn / tháng',t:'num'},{k:'kpiRevenue',l:'KPI doanh thu / tháng (₫)',t:'num'},{k:'kpiVideos',l:'KPI số video / bài / tháng',t:'num'},{k:'kpiViews',l:'KPI lượt view / tháng',t:'num'},
     {k:'phone',l:'Số điện thoại',t:'text'},{k:'startDate',l:'Ngày vào làm',t:'date'},{k:'birthday',l:'Ngày sinh',t:'date'},
@@ -986,6 +987,9 @@ const LOCKED=()=>(FLAGS.locked||[]).includes(S.month);
 const PAID_LEAVE=['Phép năm','Nghỉ ốm'], ABSENCE_TYPES=['Phép năm','Nghỉ ốm','Nghỉ không lương','Việc riêng (không lương)'];
 /* Lương cứng luôn hiện *** cho tới khi quản lý / phòng Nhân sự nhập mã xem lương (giữ trong bộ nhớ 15 phút, không lưu máy) */
 let SAL=null, SALCODE='', SALT=null;
+const SAL_FIELDS=['baseSalary','bhxhSalary','allowanceFixed','dependents','unionFee'];
+/* Thuế TNCN lũy tiến theo mẫu bảng lương */
+function pitFor(x){if(x<=0)return 0;const b=[[5e6,.05,0,0],[10e6,.1,250000,5e6],[18e6,.15,750000,10e6],[32e6,.2,1950000,18e6],[52e6,.25,4750000,32e6],[80e6,.3,9750000,52e6],[Infinity,.35,18150000,80e6]].find(r=>x<=r[0]);return b[2]+(x-b[3])*b[1];}
 const canSal=()=>isAdmin()||!!(ME&&ME.dept==='Nhân sự'); // tick thêm quyền xem chấm công không được xem bảng lương
 function salLock(){SAL=null;SALCODE='';clearTimeout(SALT);}
 function salSet(map,code){SAL=map;SALCODE=code;clearTimeout(SALT);SALT=setTimeout(()=>{salLock();render();toast('Đã tự khóa bảng lương');},15*60000);}
@@ -1086,26 +1090,31 @@ function payFor(s,rev){
   const h=HR(), M=monthSum(s.id), sv=salOf(s), hid=!sv, v=sv||s;
   const std=+h.stdDays||26, base=hid?0:(+v.baseSalary||0);
   // Theo công: (công + nghỉ có lương) / công chuẩn. Đủ lương cứng: trừ ngày nghỉ không lương.
-  const baseEarned=h.payByAttendance?Math.round(base*Math.min(M.cong+M.paidLeave,std)/std):Math.max(0,Math.round(base*(1-M.unpaidLeave/std)));
+  const probation=v.contract==='Thử việc', payRate=probation?0.85:1, payDays=Math.min(M.cong+M.paidLeave,std); // thử việc hưởng 85%
+  const baseEarned=h.payByAttendance?Math.round(base*payRate*payDays/std):Math.max(0,Math.round(base*payRate*(1-M.unpaidLeave/std)));
   const otPay=Math.round((M.ot||0)*(+h.otRate||0));
   const lateFine=Math.round(M.lateFineMin*(+h.lateRate||0)), earlyFine=Math.round(M.earlyMin*(+h.earlyRate||0)), timeFine=lateFine+earlyFine;
   const adj=(D.payadj||[]).filter(x=>x.staffId===s.id&&x.month===S.month), st=t=>sum(adj.filter(x=>x.type===t),'amount');
-  const bonus=st('Thưởng'), allow=st('Phụ cấp')+otPay, fine=st('Phạt'), adv=st('Ứng lương');
+  const bonus=st('Thưởng'), allow=st('Phụ cấp')+otPay+(hid?0:(+v.allowanceFixed||0)), fine=st('Phạt'), adv=st('Ứng lương');
   const tier=+v.commissionBonus&&+v.kpiRevenue&&rev>=+v.kpiRevenue, rate=tier?+v.commissionBonus:(+v.commission||0), com=Math.round(rev*rate/100);
-  const net=baseEarned+com+bonus+allow-fine-timeFine-adv;
-  return {hid,work:M.cong,late:M.lateN,lateMin:M.lateMin,earlyN:M.earlyN,earlyMin:M.earlyMin,lateFine,earlyFine,timeFine,ot:M.ot,otPay,paidLeave:M.paidLeave,unpaidLeave:M.unpaidLeave,absent:M.absent,base,baseEarned,com,rate,tier,bonus,allow,fine,adv,net,pay:net+adv};
+  // Theo mẫu bảng lương: BHXH 10,5%, công đoàn, thuế TNCN (thu nhập − làm thêm − ăn ca − BHXH − giảm trừ gia cảnh)
+  const bhxhBase=hid?0:(+v.bhxhSalary||0), bhxh=bhxhBase*0.105, bhxhCo=bhxhBase*0.215, union=hid?0:(+v.unionFee||0), deps=hid?0:(+v.dependents||0);
+  const income=baseEarned+com+bonus+allow, otFree=base/std/8*(M.ot||0)*payRate*0.5, meal=Math.min(730000,730000/std*M.cong), familyOff=15500000+4400000*deps;
+  const taxable=income-otFree-meal, taxBase=Math.max(taxable-bhxh-familyOff,0), tax=hid?0:pitFor(taxBase);
+  const net=income-fine-timeFine-adv-bhxh-union-tax;
+  return {hid,probation,payDays,income,bhxh,bhxhBase,bhxhCo,union,deps,otFree,meal,taxable,familyOff,taxBase,tax,work:M.cong,late:M.lateN,lateMin:M.lateMin,earlyN:M.earlyN,earlyMin:M.earlyMin,lateFine,earlyFine,timeFine,ot:M.ot,otPay,paidLeave:M.paidLeave,unpaidLeave:M.unpaidLeave,absent:M.absent,base,baseEarned,com,rate,tier,bonus,allow,fine,adv,net,pay:net+adv+bhxh+union+tax};
 }
 function payrollTable(list){
   const h=HR(), anyHid=list.some(p=>p.hid), m=(v,p)=>p.hid?STARS:short(v), tot=k=>list.reduce((t,p)=>t+(+p[k]||0),0);
   const minus=v=>v?'−'+short(v):'–';
-  return `${anyHid||SAL?salBar():''}${payExportBar(list)}<div class="tablewrap paywrap"><table class="pay"><thead><tr><th>Nhân viên</th><th class="num">Ngày công</th><th class="num">Lương cứng</th><th class="num">Lương theo công</th><th class="num">Hoa hồng</th><th class="num">Thưởng · PC · tăng ca</th><th class="num">Trừ muộn / sớm</th><th class="num">Phạt · ứng</th><th class="num">Thực nhận</th></tr></thead>
-    <tbody>${list.map(p=>`<tr><td><b>${esc(p.s.name)}</b>${p.timeFine?` <button type="button" class="linkbtn small" data-act="finedet" data-sid="${p.s.id}">Chi tiết trừ</button>`:''}<div class="small muted">${esc(p.s.dept||'')}${p.rate?` · HH ${nf(p.rate)}% × ${short(p.rev)}`:''}${p.tier?' <span class="pill good">vượt KPI</span>':''}</div></td>
+  return `${anyHid||SAL?salBar():''}${payExportBar(list)}<div class="tablewrap paywrap"><table class="pay"><thead><tr><th>Nhân viên</th><th class="num">Ngày công</th><th class="num">Lương cứng</th><th class="num">Lương theo công</th><th class="num">Hoa hồng</th><th class="num">Thưởng · PC · tăng ca</th><th class="num">Trừ muộn / sớm</th><th class="num">BHXH · CĐ · thuế</th><th class="num">Phạt · ứng</th><th class="num">Thực nhận</th></tr></thead>
+    <tbody>${list.map(p=>`<tr><td><b>${esc(p.s.name)}</b>${p.timeFine?` <button type="button" class="linkbtn small" data-act="finedet" data-sid="${p.s.id}">Chi tiết trừ</button>`:''}<div class="small muted">${esc(p.s.dept||'')}${p.rate?` · HH ${nf(p.rate)}% × ${short(p.rev)}`:''}${p.tier?' <span class="pill good">vượt KPI</span>':''}${p.probation?' <span class="pill warn">Thử việc 85%</span>':''}</div></td>
       <td class="num"><b>${p.work}</b>${p.paidLeave?`<span class="muted">+${p.paidLeave}P</span>`:''}<span class="muted">/${h.stdDays}</span>${p.unpaidLeave?`<div class="small warnc">${p.unpaidLeave} ngày nghỉ KL</div>`:''}${p.absent?`<div class="small neg">${p.absent} ngày vắng</div>`:''}</td>
       <td class="num">${m(p.base,p)}</td><td class="num">${m(p.baseEarned,p)}</td><td class="num">${short(p.com)}</td>
       <td class="num">${short(p.bonus+p.allow)}${p.otPay?`<div class="small muted">tăng ca ${p.ot}h</div>`:''}</td>
       <td class="num ${p.timeFine?'neg':''}">${minus(p.timeFine)}${p.lateMin||p.earlyMin?`<div class="small muted">${p.lateMin?'muộn '+p.lateMin+'′':''}${p.lateMin&&p.earlyMin?' · ':''}${p.earlyMin?'sớm '+p.earlyMin+'′':''}</div>`:''}</td>
-      <td class="num ${p.fine+p.adv?'neg':''}">${minus(p.fine+p.adv)}</td><td class="num net">${p.hid?STARS:vnd(p.net)}</td></tr>`).join('')}</tbody>
-    ${list.length>1?`<tfoot><tr><td>Tổng (${list.length} người)</td><td></td><td class="num">${anyHid?STARS:short(tot('base'))}</td><td class="num">${anyHid?STARS:short(tot('baseEarned'))}</td><td class="num">${short(tot('com'))}</td><td class="num">${short(tot('bonus')+tot('allow'))}</td><td class="num">${minus(tot('timeFine'))}</td><td class="num">${minus(tot('fine')+tot('adv'))}</td><td class="num net">${anyHid?STARS:vnd(tot('net'))}</td></tr></tfoot>`:''}</table></div>
+      <td class="num">${p.hid?STARS:minus(p.bhxh+p.union+p.tax)}</td><td class="num ${p.fine+p.adv?'neg':''}">${minus(p.fine+p.adv)}</td><td class="num net">${p.hid?STARS:vnd(p.net)}</td></tr>`).join('')}</tbody>
+    ${list.length>1?`<tfoot><tr><td>Tổng (${list.length} người)</td><td></td><td class="num">${anyHid?STARS:short(tot('base'))}</td><td class="num">${anyHid?STARS:short(tot('baseEarned'))}</td><td class="num">${short(tot('com'))}</td><td class="num">${short(tot('bonus')+tot('allow'))}</td><td class="num">${minus(tot('timeFine'))}</td><td class="num">${anyHid?STARS:minus(tot('bhxh')+tot('union')+tot('tax'))}</td><td class="num">${minus(tot('fine')+tot('adv'))}</td><td class="num net">${anyHid?STARS:vnd(tot('net'))}</td></tr></tfoot>`:''}</table></div>
     ${+h.lateRate||+h.earlyRate?`<div class="small muted" style="margin-top:6px">Đi muộn quá ${+h.lateFreeMin||0} phút mới phạt, ${nf(h.lateRate)} ₫/phút ${h.lateFineMode==='all'?'(tính cả số phút muộn)':'(chỉ tính phần vượt '+(+h.lateFreeMin||0)+' phút)'} · về sớm ${nf(h.earlyRate)} ₫/phút. Đơn “Đi muộn / về sớm” đã duyệt thì không trừ.</div>`:''}`;
 }
 /* Xuất Excel bảng công: mỗi nhân viên một trang riêng (kiểu phiếu công máy chấm công) */
@@ -1188,69 +1197,66 @@ function payPeople(){
   try{return calc().people.filter(p=>isActive(p.s)||p.work||p.net).sort((a,b)=>String(a.s.dept||'~').localeCompare(String(b.s.dept||'~'),'vi')||String(a.s.code||'~').localeCompare(String(b.s.code||'~'))||String(a.s.name).localeCompare(String(b.s.name),'vi'));}
   finally{S.per=keep;}
 }
-const adjNote=(sid,type)=>(D.payadj||[]).filter(x=>x.staffId===sid&&x.month===S.month&&x.type===type).map(x=>x.note).filter(Boolean).join('; ');
+/* Bảng tổng theo mẫu "LỆNH ĐI LƯƠNG": cùng tên cột, cùng thứ tự, cùng công thức */
+const PAY_COMPANY='CÔNG TY CỔ PHẦN ĐẦU TƯ VÀ PHÁT TRIỂN GIÁO DỤC QUỐC TẾ Á CHÂU';
 function paySummarySheet(wb,list){
-  const ws=wb.sheet('Bảng lương tổng'), ml=S.month.slice(5)+'/'+S.month.slice(0,4), h=HR();
+  const ws=wb.sheet('LỆNH ĐI LƯƠNG T'+(+S.month.slice(5))+'.'+S.month.slice(0,4)), h=HR(), std=+h.stdDays||26;
   ws.landscape=true;
-  const cols=[['STT',5,(p,i)=>i+1],['Mã NV',9,p=>empCode(p.s)||''],['Họ và tên',24,p=>p.s.name],['Phòng ban',16,p=>p.s.dept||''],['Công',7,p=>p.work],['Nghỉ có lương',8,p=>p.paidLeave],['Nghỉ không lương',8,p=>p.unpaidLeave],['Vắng',7,p=>p.absent],
-    ['Lương cứng',12,p=>p.base,1],['Lương theo công',12,p=>p.baseEarned,1],['Hoa hồng',11,p=>p.com,1],['Thưởng',11,p=>p.bonus,1],['Phụ cấp',11,p=>p.allow-p.otPay,1],['Tăng ca',11,p=>p.otPay,1],
-    ['Trừ đi muộn',11,p=>p.lateFine,1],['Trừ về sớm',11,p=>p.earlyFine,1],['Phạt',11,p=>p.fine,1],['Ứng lương',11,p=>p.adv,1],['Thực nhận',14,p=>p.net,1],['Ký nhận',12,()=>'']];
-  const last=cols.length-1;
-  cols.forEach((c,i)=>ws.width(i,c[1]));
-  ws.merge(0,0,0,last,'CÔNG TY DƯỢC MINH ĐƯỜNG',{b:1,color:'5C6A10',sz:11});
-  ws.merge(1,0,1,last,`BẢNG LƯƠNG TỔNG THÁNG ${ml}${LOCKED()?' (ĐÃ CHỐT CÔNG)':''}`,{b:1,sz:15,h:'center'}).height(1,26);
-  ws.merge(2,0,2,last,`Ngày công chuẩn: ${h.stdDays} · Phiếu lương từng người xem ở các trang bên cạnh`,{i:1,h:'center',color:'595959'});
-  cols.forEach((c,i)=>ws.set(4,i,c[0],{b:1,h:'center',wrap:1,border:1,fill:'5C6A10',color:'FFFFFF',bc:'5C6A10'}));ws.height(4,34);ws.freeze=[5,3];
-  list.forEach((p,i)=>cols.forEach((c,j)=>{const v=c[2](p,i);
-    ws.set(5+i,j,v,{border:1,fill:i%2?'F7F8EF':undefined,h:j===2||j===3?'left':c[3]?'right':'center',b:j===last-1?1:0,nf:c[3]?XNF:undefined});}));
+  const bank=s=>{const x=salOf(s)||s;return [x.bank,x.bankAccount].filter(Boolean).join(' ');};
+  // [nhóm tiêu đề, tên cột, độ rộng, giá trị, là tiền]
+  const C=[['STT','',5,(p,i)=>i+1],['Mã Nhân viên','',10,p=>empCode(p.s)||''],['Họ và tên','',22,p=>p.s.name],['Phòng ban','',13,p=>p.s.dept||''],['Chức danh','',12,p=>(salOf(p.s)||{}).position||p.s.position||''],
+    ['Lương chức danh','',12,p=>p.base,1],['Mức lương','',12,p=>p.bhxhBase,1],['Bổ sung khác','',12,p=>p.base-p.bhxhBase,1],['Lương đóng BHXH','',12,p=>p.bhxhBase,1],
+    ['Số công làm việc thực tế','',9,p=>p.work],['Công chính thức (100%)','',9,p=>p.probation?0:p.payDays],['Công thử việc (85%)','',9,p=>p.probation?p.payDays:0],
+    ['Giờ làm thêm','Ngày thường',8,p=>p.probation?0:(p.ot||0)],['Giờ làm thêm','Thứ 7, CN',8,()=>0],['Giờ làm thêm','Ngày Lễ tết',8,()=>0],
+    ['Giờ làm thêm 85%','Ngày thường',8,p=>p.probation?(p.ot||0):0],['Giờ làm thêm 85%','Thứ 7, CN',8,()=>0],['Giờ làm thêm 85%','Ngày Lễ tết',8,()=>0],
+    ['Thu nhập theo ngày công','',13,p=>p.baseEarned,1],['Lương làm thêm giờ','',11,p=>p.otPay,1],['Phụ cấp kiêm nhiệm','',11,p=>p.allow-p.otPay,1],['Hỗ trợ BHXH','',10,()=>0,1],['Hoa hồng công việc','',12,p=>p.com,1],['Khoản khác','',11,p=>p.bonus,1],['Tiền phạt','',9,()=>0,1],
+    ['Tổng thu nhập','',13,p=>p.income,1],['Thu nhập không chịu thuế','Lương làm thêm không chịu thuế',11,p=>p.otFree,1],['Thu nhập không chịu thuế','Ăn ca giảm trừ thuế',10,p=>p.meal,1],['Thu nhập không chịu thuế','Phụ cấp giảm trừ thuế (xăng xe, ĐT, gửi xe)',11,()=>0,1],['Thu nhập chịu thuế','',13,p=>p.taxable,1],
+    ['Trích nộp BHXH NLĐ','',11,p=>p.bhxh,1],['Trích nộp BHXH NLĐ (10.5%)','',11,p=>p.bhxh,1],['BHXH Công ty (21.5%)','',11,p=>p.bhxhCo,1],['Truy thu BHXH NLĐ','',10,()=>0,1],['Truy thu BHXH Công ty','',10,()=>0,1],
+    ['Thuế TNCN','Người phụ thuộc',8,p=>p.deps],['Thuế TNCN','Giảm trừ gia cảnh',12,p=>p.familyOff,1],['Thuế TNCN','Thu nhập tính thuế',12,p=>p.taxBase,1],['Trích nộp thuế TNCN','',11,p=>p.tax,1],
+    ['Điều chỉnh trừ sau thuế','Tạm ứng',11,p=>p.adv,1],['Điều chỉnh trừ sau thuế','Trừ đi muộn về sớm',11,p=>p.timeFine,1],['Điều chỉnh khác','',9,()=>0,1],['Công Đoàn','',9,p=>p.union,1],['Điều chỉnh cộng sau thuế','',10,()=>0,1],
+    ['Thu nhập thực nhận','',13,p=>Math.round((p.income-p.bhxh-p.tax-p.adv-p.timeFine-p.union)/1000)*1000,1],['Phạt sai hàng/ chậm báo cáo','',11,p=>p.fine,1],['Giảm 20% lương','',9,()=>0,1],['Thực nhận','',14,p=>p.net,1],['Số tài khoản','',22,p=>bank(p.s)],['Ghi chú','',16,p=>p.s.name]];
+  const last=C.length-1, netCol=C.findIndex(c=>c[0]==='Thực nhận'), hs={b:1,h:'center',wrap:1,border:1,fill:'5C6A10',color:'FFFFFF',bc:'FFFFFF'};
+  C.forEach((c,i)=>ws.width(i,c[2]));
+  ws.merge(0,0,0,last,PAY_COMPANY,{b:1,color:'5C6A10',sz:11});
+  ws.merge(1,0,1,last,`BẢNG LƯƠNG THÁNG ${S.month.slice(5)}/${S.month.slice(0,4)}${LOCKED()?' (ĐÃ CHỐT CÔNG)':''}`,{b:1,sz:15,h:'center'}).height(1,26);
+  ws.set(2,0,'CTC',{b:1});ws.set(2,1,std,{b:1,h:'center'});
+  for(let i=0;i<C.length;){let j=i;while(j<last&&C[i][1]&&C[j+1][0]===C[i][0])j++;
+    if(C[i][1]){if(j>i)ws.merge(3,i,3,j,C[i][0],hs);else ws.set(3,i,C[i][0],hs);for(let k=i;k<=j;k++)ws.set(4,k,C[k][1],hs);}
+    else ws.merge(3,i,4,i,C[i][0],hs);
+    i=j+1;}
+  ws.height(3,32);ws.height(4,62);ws.freeze=[5,3];
+  list.forEach((p,i)=>C.forEach((c,j)=>ws.set(5+i,j,c[3](p,i),{border:1,fill:i%2?'F7F8EF':undefined,h:c[4]?'right':j===2||j===3||j===4||j>=last-1?'left':'center',b:j===netCol?1:0,wrap:j>=last-1?1:undefined,nf:c[4]?XNF:undefined})));
   const r=5+list.length;
-  ws.merge(r,0,r,7,'Tổng cộng',{b:1,h:'center',border:1,fill:'D9D9D9'});
-  cols.forEach((c,j)=>{if(j<8)return;ws.set(r,j,c[3]?list.reduce((t,p)=>t+(+c[2](p)||0),0):'',{b:1,h:'right',border:1,fill:'D9D9D9',nf:c[3]?XNF:undefined});});
-  [['Người lập biểu',0,3],['Kế toán',4,11],['Giám đốc',12,last]].forEach(([t,a,b])=>{ws.merge(r+2,a,r+2,b,t,{b:1,h:'center'});ws.merge(r+3,a,r+3,b,'(Ký, ghi rõ họ tên)',{i:1,h:'center',sz:9,color:'7F7F7F'});});
+  ws.merge(r,0,r,4,'Tổng cộng',{b:1,h:'center',border:1,fill:'D9D9D9'});
+  C.forEach((c,j)=>{if(j>4)ws.set(r,j,c[4]?list.reduce((t,p,i)=>t+(+c[3](p,i)||0),0):'',{b:1,h:'right',border:1,fill:'D9D9D9',nf:c[4]?XNF:undefined});});
+  [['Người lập biểu',0,3],['Kế toán',18,24],['Giám đốc',netCol-3,netCol]].forEach(([t,a,b])=>{ws.merge(r+2,a,r+2,b,t,{b:1,h:'center'});ws.merge(r+3,a,r+3,b,'(Ký, ghi rõ họ tên)',{i:1,h:'center',sz:9,color:'7F7F7F'});});
 }
+/* Phiếu từng người theo mẫu "Phiếu lương": thu nhập bên trái, khoản trừ bên phải */
 function paySlipSheet(wb,p){
-  const s=p.s, h=HR(), M=monthSum(s.id), days=monthDaysList(), ml=S.month.slice(5)+'/'+S.month.slice(0,4), std=+h.stdDays||26;
-  const ws=wb.sheet(s.name); [11,14,9,10,12,9,14].forEach((w,i)=>ws.width(i,w));
-  const box={border:1}, head={b:1,fill:'D9D9D9',border:1,h:'center'}, sec={b:1,fill:'EBEED8',border:1};
-  ws.merge(0,0,0,6,'CÔNG TY DƯỢC MINH ĐƯỜNG',{b:1,color:'5C6A10',sz:11});
-  ws.merge(1,0,1,6,`PHIẾU LƯƠNG THÁNG ${ml}`,{b:1,sz:15,h:'center'}).height(1,28);
-  let r=3;
-  [['Họ và tên',s.name,'Mã NV',empCode(s)||'—'],['Phòng ban',s.dept||'—','Ca làm',shiftOf(s.id).name]].forEach(x=>{ws.set(r,0,x[0],{...box,b:1});ws.merge(r,1,r,3,x[1],box);ws.set(r,4,x[2],{...box,b:1});ws.merge(r,5,r,6,x[3],box);r++;});
-  if(s.bank||s.bankAccount){ws.set(r,0,'Tài khoản',{...box,b:1});ws.merge(r,1,r,6,[s.bank,s.bankAccount].filter(Boolean).join(' · '),box);r++;}
-  r++;
-  ws.merge(r,0,r,6,'I. NGÀY CÔNG',sec);r++;
-  [['Công chuẩn',std,'Ngày công',p.work],['Nghỉ có lương',p.paidLeave,'Nghỉ không lương',p.unpaidLeave],['Vắng không phép',p.absent,'Tăng ca (giờ)',p.ot||0],[`Đi muộn (${M.lateN} lần)`,M.lateMin+' phút',`Về sớm (${M.earlyN} lần)`,M.earlyMin+' phút']].forEach(x=>{ws.merge(r,0,r,1,x[0],box);ws.merge(r,2,r,3,x[1],{...box,h:'center',b:1});ws.merge(r,4,r,5,x[2],box);ws.set(r,6,x[3],{...box,h:'center',b:1});r++;});
-  r++;
-  const line=(t,note,v,o)=>{ws.merge(r,0,r,1,t,{...box,...(o||{})});ws.merge(r,2,r,5,note||'',{...box,wrap:1,color:'595959',sz:9});ws.set(r,6,v,{...box,h:'right',nf:XNF,...(o||{})});r++;};
-  const earnNote=h.payByAttendance?`(${p.work} công + ${p.paidLeave} nghỉ có lương) / ${std} × lương cứng`:p.unpaidLeave?`Trừ ${p.unpaidLeave} ngày nghỉ không lương`:'Đủ lương cứng';
-  ws.merge(r,0,r,6,'II. THU NHẬP',sec);r++;
-  ws.merge(r,0,r,1,'Khoản',head);ws.merge(r,2,r,5,'Diễn giải',head);ws.set(r,6,'Số tiền (₫)',head);r++;
-  line('Lương cứng (tham khảo)','Mức lương tháng, không cộng vào tổng',p.base,{i:1,color:'7F7F7F'});
-  line('Lương theo công',earnNote,p.baseEarned);
-  line('Hoa hồng',p.rate?`${nf(p.rate)}% × ${nf(p.rev)} ₫${p.tier?' (vượt KPI)':''}`:'',p.com);
-  line('Thưởng',adjNote(s.id,'Thưởng'),p.bonus);
-  line('Phụ cấp',adjNote(s.id,'Phụ cấp'),p.allow-p.otPay);
-  line('Tăng ca',p.otPay?`${p.ot} giờ × ${nf(h.otRate)} ₫`:'',p.otPay);
-  const income=p.baseEarned+p.com+p.bonus+p.allow;
-  line('Tổng thu nhập','',income,{b:1});
-  r++;
-  ws.merge(r,0,r,6,'III. CÁC KHOẢN TRỪ',sec);r++;
-  line('Đi muộn',`${M.lateFineMin} phút bị phạt × ${nf(h.lateRate)} ₫ (quá ${+h.lateFreeMin||0} phút mới phạt)`,p.lateFine);
-  line('Về sớm',`${M.earlyMin} phút × ${nf(h.earlyRate)} ₫`,p.earlyFine);
-  line('Phạt',adjNote(s.id,'Phạt'),p.fine);
-  line('Ứng lương',adjNote(s.id,'Ứng lương'),p.adv);
-  line('Tổng trừ','',p.timeFine+p.fine+p.adv,{b:1});
-  r++;
-  ws.merge(r,0,r,5,'THỰC NHẬN',{b:1,sz:13,fill:'EBEED8',border:1,h:'center'});ws.set(r,6,p.net,{b:1,sz:13,fill:'EBEED8',border:1,h:'right',nf:XNF});ws.height(r,26);r+=2;
-  const det=M.st.map((x,i)=>({x,ds:days[i]})).filter(o=>o.x.late||o.x.early);
+  const s=p.s, x=salOf(s)||s, h=HR(), M=monthSum(s.id), days=monthDaysList(), std=+h.stdDays||26;
+  const ws=wb.sheet(s.name); [13,31,17,7,34,16].forEach((w,i)=>ws.width(i,w));
+  const box={border:1}, lab={border:1,b:1}, head={b:1,fill:'D9D9D9',border:1,h:'center',wrap:1}, money={border:1,h:'right',nf:XNF}, tot={b:1,fill:'EBEED8',border:1}, totM={...tot,h:'right',nf:XNF};
+  ws.merge(0,0,0,5,`LƯƠNG THÁNG ${+S.month.slice(5)}/${S.month.slice(0,4)}`,{b:1,sz:15,h:'center'}).height(0,30);
+  const info=[['Mã Nhân viên',empCode(s)||'—','Mức lương cơ bản',p.base,1],['Họ và tên',s.name,'Ngày công chuẩn',std],['Chức danh',x.position||'',  'Ngày công chuẩn tính lương',std],['Hợp đồng',p.probation?'Thử việc (85% lương)':(x.contract||'Chính thức'),'Ngày công đi làm thực tế',p.work]];
+  info.forEach((o,i)=>{const r=2+i;ws.set(r,0,o[0],lab);ws.set(r,1,o[1],box);ws.merge(r,2,r,3,o[2],lab);ws.merge(r,4,r,5,o[3],o[4]?{...money,b:1}:{border:1,h:'right',b:1});});
+  const income=[['Lương theo ngày công',p.baseEarned],['Phụ cấp trách nhiệm',p.allow-p.otPay],['Thưởng hoa hồng',p.com+p.bonus],['Tiền livestream',0],['Phụ cấp BHXH',0],['Lương làm thêm giờ',p.otPay]];
+  const cuts=[['BHXH, BHYT, BHTN',p.bhxh],['Kinh phí Công Đoàn',p.union],['Trừ ứng lương',p.adv],['Trừ tiền đi muộn về sớm + phạt',p.timeFine+p.fine],['Trích nộp thuế TNCN',p.tax],['Khác',0]];
+  let r=7;['STT','CÁC KHOẢN THU NHẬP','SỐ TIỀN (VNĐ)','STT','CÁC KHOẢN TRỪ VÀO LƯƠNG','SỐ TIỀN (VNĐ)'].forEach((t,i)=>ws.set(r,i,t,head));ws.height(r,30);r++;
+  income.forEach((o,i)=>{const c=cuts[i];ws.set(r,0,i+1,{...box,h:'center'});ws.set(r,1,o[0],box);ws.set(r,2,o[1],money);ws.set(r,3,i+1,{...box,h:'center'});ws.set(r,4,c[0],box);ws.set(r,5,c[1],money);r++;});
+  const inSum=income.reduce((t,o)=>t+o[1],0), cutSum=cuts.reduce((t,o)=>t+o[1],0);
+  ws.merge(r,0,r,1,'Tổng cộng',tot);ws.set(r,2,inSum,totM);ws.merge(r,3,r,4,'Tổng cộng',tot);ws.set(r,5,cutSum,totM);r++;
+  ws.merge(r,0,r,1,'Lương thực nhận',{...tot,sz:12});ws.set(r,2,inSum-cutSum,{...totM,sz:12});ws.height(r,24);r+=2;
+  ws.merge(r,2,r,3,'STK - ngân hàng',lab);ws.merge(r,4,r,5,[x.bank,x.bankAccount].filter(Boolean).join(' '),box);r++;
+  ws.merge(r,2,r,3,'Người nhận',lab);ws.merge(r,4,r,5,s.name,box);r+=2;
+  const det=M.st.map((d,i)=>({d,ds:days[i]})).filter(o=>o.d.late||o.d.early);
   if(det.length){
-    ws.merge(r,0,r,6,'CHI TIẾT ĐI MUỘN / VỀ SỚM',sec);r++;
-    ['Ngày','Vào – Ra','Muộn','Phút phạt','Trừ muộn','Về sớm','Trừ sớm'].forEach((t,i)=>ws.set(r,i,t,head));r++;
-    det.forEach(o=>{const lf=lateFineMin(o.x.late),a=o.x.a||{};
-      [dmy(o.ds),`${a.checkIn||'—'} – ${a.checkOut||'—'}`,o.x.late||0,lf,lf*(+h.lateRate||0),o.x.early||0,(o.x.early||0)*(+h.earlyRate||0)].forEach((v,c)=>ws.set(r,c,v,{...box,h:c>3&&c!==5?'right':'center',nf:c===4||c===6?XNF:undefined}));r++;});
+    ws.merge(r,0,r,5,'CHI TIẾT ĐI MUỘN / VỀ SỚM',{...tot,h:'center'});r++;
+    ['Ngày','Vào – Ra','Phút muộn','Phạt','Phút về sớm','Trừ (₫)'].forEach((t,i)=>ws.set(r,i,t,head));r++;
+    det.forEach(o=>{const lf=lateFineMin(o.d.late),a=o.d.a||{},m=lf*(+h.lateRate||0)+(o.d.early||0)*(+h.earlyRate||0);
+      [dmy(o.ds),`${a.checkIn||'—'} – ${a.checkOut||'—'}`,o.d.late||0,lf,o.d.early||0,m].forEach((v,c)=>ws.set(r,c,v,c===5?money:{...box,h:'center'}));r++;});
     r++;
   }
-  [['Người nhận lương',0,2],['Người lập biểu',3,4],['Giám đốc',5,6]].forEach(([t,a,b])=>{ws.merge(r,a,r,b,t,{b:1,h:'center'});ws.merge(r+1,a,r+1,b,'(Ký, ghi rõ họ tên)',{i:1,h:'center',sz:9,color:'7F7F7F'});});
+  [['Người nhận lương',0,1],['Người lập biểu',2,3],['Giám đốc',4,5]].forEach(([t,a,b])=>{ws.merge(r,a,r,b,t,{b:1,h:'center'});ws.merge(r+1,a,r+1,b,'(Ký, ghi rõ họ tên)',{i:1,h:'center',sz:9,color:'7F7F7F'});});
 }
 /* sel: '' = tất cả, 'dept:Tên' = 1 phòng, id = 1 người. sep = mỗi người 1 file riêng (không kèm bảng tổng). */
 async function exportPayroll(sel,sep){
@@ -1825,8 +1831,8 @@ function openForm(col,id,preset){
     if(!rec&&col==='staff'&&f.k==='code')v=nextCode();
     if(!rec&&col==='staff'&&f.k==='pin')v=String(Math.floor(100000+Math.random()*900000));
     if(!rec&&preset&&preset[f.k]!=null)v=preset[f.k];
-    const salHide=col==='staff'&&f.k==='baseSalary'&&!SAL;
-    if(col==='staff'&&f.k==='baseSalary')v=SAL&&rec?(SAL[rec.id]||{}).baseSalary:'';
+    const salF=col==='staff'&&SAL_FIELDS.includes(f.k), salHide=salF&&!SAL;
+    if(salF)v=SAL&&rec?(SAL[rec.id]||{})[f.k]:'';
     if(v==null)v='';
     const lock=salHide||!can||(!isAdmin()&&(f.adminOnly||((col==='reports'||col==='leaves')&&f.k==='staffId')||(col==='leaves'&&f.k==='status')||(col==='tasks'&&rec&&rec.createdBy&&rec.createdBy!==ME.id&&!['status','report','link'].includes(f.k))));
     const id='f_'+f.k, ro=lock?' disabled':'', lab=`<label for="${id}" data-base="${esc(f.l)}">${f.l}${f.req?' *':''}</label>`;
@@ -1868,7 +1874,7 @@ document.getElementById('form').addEventListener('submit',async e=>{
   const {col,id}=editing, fm=e.target, obj={};
   for(const f of FIELDS[col]){
     if(f.t==='perms'){obj[f.k]=PERMS.map(([k])=>k).filter(k=>fm.elements['perms_'+k]&&fm.elements['perms_'+k].checked).join(',');continue;}
-    const el=fm.elements[f.k];if(!el)continue;if(col==='staff'&&f.k==='baseSalary'&&!SAL)continue; // lương đang ẩn: giữ nguyên lương cũ
+    const el=fm.elements[f.k];if(!el)continue;if(col==='staff'&&SAL_FIELDS.includes(f.k)&&!SAL)continue; // lương đang ẩn: giữ nguyên số cũ
     let v=el.value.trim();const hid=!!el.closest('.fld[hidden]');if(hid&&f.t!=='num')v='';
     if(f.req&&v===''&&!hid){formErr(`Vui lòng nhập "${f.l}".`);el.focus();return;}
     if(f.t==='num'){v=v===''?0:Number(v.replace(',','.'));if(!isFinite(v)||v<0){formErr(`"${f.l}" phải là số không âm.`);return;}}
