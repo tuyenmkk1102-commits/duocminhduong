@@ -594,7 +594,7 @@ const canEdit=(col,r)=>{
   if(col==='orders'&&!r&&FLAGS.pancake&&!isAdmin()) return false;
   if(recLocked(col,r)) return false;
   if(isAdmin()) return true;
-  if(col==='cltpl') return !!(r&&r.staffId===ME.id);
+  if(col==='cltpl') return !r||r.staffId===ME.id;
   if(ADMIN_COLS.includes(col)) return false;
   if(col==='leaves'&&r&&r.status&&r.status!=='Chờ duyệt') return false;
   return !r||mine(r);
@@ -1905,7 +1905,7 @@ function openForm(col,id,preset){
     return `<div class="fld ${f.wide?'wide':''}" data-k="${f.k}">${lab}${inp}${mp}</div>`}).join('');
   if(col==='leaves'){const ty=document.getElementById('f_type');reqShape();ty&&ty.addEventListener('change',reqShape);}
   if(FORM_HOOKS[col]) FORM_HOOKS[col](rec);
-  const del=document.getElementById('form-del'); del.hidden=!rec||!can||(col==='cltpl'&&!isAdmin()); del.classList.remove('armed'); del.textContent='Xóa';
+  const del=document.getElementById('form-del'); del.hidden=!rec||!can; del.classList.remove('armed'); del.textContent='Xóa';
   document.getElementById('form-save').hidden=!can;
   document.getElementById('form-cancel').textContent=can?'Hủy':'Đóng';
   document.getElementById('form-err').hidden=true;
@@ -2127,12 +2127,17 @@ const FORM_HOOKS={
     const old=w.querySelector('.fld[data-k="done"]');if(old&&!(rec&&rec.done))old.hidden=true;
     const can=!rec||canEdit('reports',rec),ro=can?'':' disabled',it=document.createElement('div');it.className='fld wide';it.id='rp-items';
     const oth=(x={})=>`<div class="rpi-row" data-other><input class="rpi-nm" aria-label="Tên việc" placeholder="Tên việc" value="${esc(x.name||'')}"${ro}><input class="rpi-val" aria-label="Số lượng" placeholder="Số / chữ" value="${esc(x.val==null?'':x.val)}"${ro}>${can?'<button type="button" class="iconbtn" data-rpdel aria-label="Xóa dòng">✕</button>':''}</div>`;
-    it.innerHTML=`<div class="rp-lab">Đầu mục công việc</div><div id="rp-tpl"></div><div class="rp-lab" style="margin-top:12px">Công việc khác</div><div id="rp-other">${rpItems(rec).other.map(oth).join('')}</div>${can?'<button type="button" class="btn" id="rp-addother" style="margin-top:6px">+ Thêm việc khác</button>':''}`;
+    it.innerHTML=`<div class="rp-lab">Đầu mục công việc</div><div id="rp-tpl"></div>${can?'<div class="rpi-row"><input class="rpi-nm" id="rp-newtpl" aria-label="Tên đầu mục mới" placeholder="Tên đầu mục mới (hiện sẵn mỗi ngày)"><button type="button" class="btn" id="rp-addtpl">+ Thêm đầu mục</button></div>':''}<div class="rp-lab" style="margin-top:12px">Công việc khác</div><div id="rp-other">${rpItems(rec).other.map(oth).join('')}</div>${can?'<button type="button" class="btn" id="rp-addother" style="margin-top:6px">+ Thêm việc khác</button>':''}`;
     w.insertBefore(it,plan);
-    const draw=()=>{const de=document.getElementById('f_date'),se=document.getElementById('f_staffId'),dd=(de&&de.value)||d,ss=(se&&se.value)||sid,same=rec&&rec.date===dd&&rec.staffId===ss,rows=rpTplRows(ss,dd,same?rec:null);
-      document.getElementById('rp-tpl').innerHTML=rows.length?rows.map(x=>`<div class="rpi-row"><label class="rpi-name" for="rpt-${esc(x.id)}">${esc(x.name)}</label><input class="rpi-val" id="rpt-${esc(x.id)}" data-tid="${esc(x.id)}" data-tname="${esc(x.name)}" placeholder="Số / chữ" value="${esc(x.val)}"${ro}></div>`).join(''):`<div class="small muted">Chưa có đầu mục sẵn. Quản lý thêm cho từng người ở mục Checklist.</div>`;};
+    let drawn='';const who=()=>{const de=document.getElementById('f_date'),se=document.getElementById('f_staffId');return [(de&&de.value)||d,(se&&se.value)||sid];};
+    const draw=()=>{const [dd,ss]=who(),key=dd+'|'+ss,same=rec&&rec.date===dd&&rec.staffId===ss,rows=rpTplRows(ss,dd,same?rec:null),keep={};
+      if(key===drawn)it.querySelectorAll('[data-tid]').forEach(i=>keep[i.dataset.tid]=i.value);drawn=key;
+      document.getElementById('rp-tpl').innerHTML=rows.length?rows.map(x=>`<div class="rpi-row"><label class="rpi-name" for="rpt-${esc(x.id)}">${esc(x.name)}</label><input class="rpi-val" id="rpt-${esc(x.id)}" data-tid="${esc(x.id)}" data-tname="${esc(x.name)}" placeholder="Số / chữ" value="${esc(keep[x.id]??x.val)}"${ro}></div>`).join(''):`<div class="small muted">Chưa có đầu mục. Gõ tên việc làm hàng ngày ở ô dưới rồi bấm Thêm đầu mục.</div>`;};
     draw();['f_date','f_staffId'].forEach(k=>{const e=document.getElementById(k);e&&e.addEventListener('change',draw);});
-    it.addEventListener('click',e=>{const t=e.target;if(t.id==='rp-addother'){document.getElementById('rp-other').insertAdjacentHTML('beforeend',oth());document.getElementById('rp-other').lastElementChild.querySelector('input').focus();}else if(t.dataset&&'rpdel' in t.dataset)t.closest('[data-other]').remove();});},
+    const addTpl=async()=>{const n=document.getElementById('rp-newtpl'),b=document.getElementById('rp-addtpl'),nm=n.value.trim(),ss=who()[1];if(!nm){n.focus();return;}
+      b.disabled=true;try{apply(await run('save',PIN,'cltpl',null,{staffId:ss,name:nm,tag:'',order:(D.cltpl||[]).filter(i=>i.staffId===ss).length+1}));n.value='';draw();n.focus();toast('Đã thêm đầu mục');}catch(err){formErr(msg(err));}finally{b.disabled=false;}};
+    const nw=document.getElementById('rp-newtpl');nw&&nw.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTpl();}});
+    it.addEventListener('click',e=>{const t=e.target;if(t.id==='rp-addtpl')addTpl();else if(t.id==='rp-addother'){document.getElementById('rp-other').insertAdjacentHTML('beforeend',oth());document.getElementById('rp-other').lastElementChild.querySelector('input').focus();}else if(t.dataset&&'rpdel' in t.dataset)t.closest('[data-other]').remove();});},
   chrep(){const sel=document.getElementById('f_channelId');const shape=()=>{const c=chanOf(sel&&sel.value),full=!c||grpOf(c.group).full;
       FIELDS.chrep.forEach(f=>{if(!f.full)return;const b=document.querySelector(`#form-fields .fld[data-k="${f.k}"]`);if(b)b.hidden=!full;});};
     shape();sel&&sel.addEventListener('change',shape);},
@@ -2203,7 +2208,7 @@ const reqForMe=r=>{const tm=myTeam(),dp=myDept(),to=String(r.toTeam||'').trim();
 const myReqLabel=()=>myTeam()?'team '+myTeam():myDept()?'phòng '+myDept():'';
 function openReqsForMe(){return (D.reqs||[]).filter(r=>(r.status==='Mới'||r.status==='Đang làm')&&(isAdmin()||reqForMe(r)));}
 function myClToday(){const t=todayStr();return sum((D.clog||[]).filter(l=>l.date===t&&l.staffId===ME.id),'qty');}
-function myClBox(){const items=(D.cltpl||[]).filter(i=>i.staffId===ME.id);if(!items.length)return '<div class="muted">Chưa có đầu việc. Quản lý sẽ thêm cho bạn.</div>';
+function myClBox(){const items=(D.cltpl||[]).filter(i=>i.staffId===ME.id);if(!items.length)return '<div class="muted">Chưa có đầu việc. Vào mục <b>Checklist cá nhân</b> để tự thêm.</div>';
   return `<div class="small muted">Vào mục <b>Checklist cá nhân</b> để điền số lượng.</div>`;}
 function donut(parts){const tot=parts.reduce((t,p)=>t+p.v,0)||1,R=60,C=2*Math.PI*R;let off=0;
   const segs=parts.filter(p=>p.v>0).map(p=>{const len=p.v/tot*C,s=`<circle r="${R}" cx="80" cy="80" fill="none" stroke="${p.c}" stroke-width="26" stroke-dasharray="${len.toFixed(2)} ${(C-len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 80 80)"><title>${esc(p.l)}: ${nf(p.v)}</title></circle>`;off+=len;return s;}).join('');
@@ -2328,7 +2333,7 @@ function clPeople(onlyMe){const items=D.cltpl||[];if(onlyMe)return [myStaff().id
 function clCard(s,d,edit){const items=(D.cltpl||[]).filter(i=>i.staffId===s.id).sort((a,b)=>(+a.order||0)-(+b.order||0)),qty=id=>{const l=(D.clog||[]).find(x=>x.itemId===id&&x.date===d);return l?+l.qty||0:0;};
   const tot=items.reduce((t,i)=>t+qty(i.id),0),canW=edit&&(isAdmin()||s.id===ME.id)&&!LOCKED();
   return `<div class="panel clcard"><h3><span>${esc(s.name)}</span><span class="small muted">TỔNG <b class="${tot?'up':'neg'}" style="font-size:18px">${tot}</b></span></h3>
-    ${items.length?items.map(i=>`<div class="clrow">${i.tag?`<span class="tag">${esc(i.tag)}</span>`:''}<span class="nm">${esc(i.name)}</span>${canW?`<input id="clq-${i.id}" type="number" min="0" inputmode="numeric" data-clq="${i.id}" data-cls="${s.id}" data-d="${d}" value="${qty(i.id)||''}" placeholder="0">`:`<b>${qty(i.id)||'<span class="muted">0</span>'}</b>`}${edit&&canEdit('cltpl',i)?`<button class="iconbtn" data-act="edit" data-col="cltpl" data-id="${i.id}" title="Sửa đầu việc" aria-label="Sửa đầu việc">✎</button>`:''}${isAdmin()&&edit?`<button class="iconbtn" data-act="cldel" data-id="${i.id}" title="Xóa đầu việc" aria-label="Xóa đầu việc">✕</button>`:''}</div>`).join('')
+    ${items.length?items.map(i=>`<div class="clrow">${i.tag?`<span class="tag">${esc(i.tag)}</span>`:''}<span class="nm">${esc(i.name)}</span>${canW?`<input id="clq-${i.id}" type="number" min="0" inputmode="numeric" data-clq="${i.id}" data-cls="${s.id}" data-d="${d}" value="${qty(i.id)||''}" placeholder="0">`:`<b>${qty(i.id)||'<span class="muted">0</span>'}</b>`}${edit&&canEdit('cltpl',i)?`<button class="iconbtn" data-act="edit" data-col="cltpl" data-id="${i.id}" title="Sửa đầu việc" aria-label="Sửa đầu việc">✎</button>`:''}${edit&&canEdit('cltpl',i)?`<button class="iconbtn" data-act="cldel" data-id="${i.id}" title="Xóa đầu việc" aria-label="Xóa đầu việc">✕</button>`:''}</div>`).join('')
       :'<div class="muted small" style="padding:10px 0">Chưa có đầu việc.</div>'}</div>`;}
 function clSummary(d){return `<div class="toolbar"><h2 style="margin:0">Checklist công việc · ${fullDmy(d)}</h2><span class="spacer"></span><input type="date" id="cld2" data-fdate="cld" value="${d}" aria-label="Ngày"></div>
   <div class="small muted" style="margin-bottom:8px">Chỉ xem. Vào mục Checklist để điền số lượng.</div><div class="cards3">${clPeople(false).map(s=>clCard(s,d,false)).join('')}</div>`;}
@@ -2336,6 +2341,9 @@ function vChecklist(onlyMe){const d=S.f.cld||todayStr(),f=S.f.cladd||{};
   return `<div class="toolbar"><span class="muted">Đầu việc điền sẵn theo từng người, mỗi ngày chỉ cần nhập số lượng.</span><span class="spacer"></span><input type="date" id="cld" data-fdate="cld" value="${d}" aria-label="Ngày"></div>
   ${isAdmin()&&!onlyMe?`<div class="panel" style="margin-bottom:14px"><div class="toolbar" style="margin:0"><b>＋ Thêm đầu việc cho</b>
     <select id="cl-st" aria-label="Nhân viên">${D.staff.filter(isActive).map(s=>`<option value="${s.id}" ${s.id===f.st?'selected':''}>${esc(s.name)}</option>`).join('')}</select>
+    <input id="cl-name" placeholder="Tên đầu việc…" style="flex:1;min-width:180px"><select id="cl-tag" aria-label="Nhãn">${CL_TAGS.map(t=>`<option value="${t}">${t||'Không nhãn'}</option>`).join('')}</select>
+    <button class="btn primary" data-act="cladd">Thêm</button></div></div>`:''}
+  ${onlyMe?`<div class="panel" style="margin-bottom:14px"><div class="toolbar" style="margin:0"><b>＋ Thêm đầu việc của tôi</b><input type="hidden" id="cl-st" value="${esc(ME.id)}">
     <input id="cl-name" placeholder="Tên đầu việc…" style="flex:1;min-width:180px"><select id="cl-tag" aria-label="Nhãn">${CL_TAGS.map(t=>`<option value="${t}">${t||'Không nhãn'}</option>`).join('')}</select>
     <button class="btn primary" data-act="cladd">Thêm</button></div></div>`:''}
   <div class="cards3">${clPeople(onlyMe).map(s=>clCard(s,d,true)).join('')}</div>`;}
