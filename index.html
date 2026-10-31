@@ -984,9 +984,9 @@ function adsPanel(){
 const HR=()=>Object.assign({workStart:'08:30',workEnd:'17:30',breakMin:60,graceMin:0,otRate:0,lateRate:2000,lateFreeMin:15,lateFineMode:'over',earlyRate:0,stdDays:26,payByAttendance:false,careDays:30,offDays:'sun',gpsRequired:false,officeLat:'',officeLng:'',radius:200,reportDeadline:'17:30'},FLAGS.hr||{});
 const LOCKED=()=>(FLAGS.locked||[]).includes(S.month);
 const PAID_LEAVE=['Phép năm','Nghỉ ốm'], ABSENCE_TYPES=['Phép năm','Nghỉ ốm','Nghỉ không lương','Việc riêng (không lương)'];
-/* Lương cứng luôn hiện *** cho tới khi quản lý / nhân sự nhập mã xem lương (giữ trong bộ nhớ 15 phút, không lưu máy) */
+/* Lương cứng luôn hiện *** cho tới khi quản lý / phòng Nhân sự nhập mã xem lương (giữ trong bộ nhớ 15 phút, không lưu máy) */
 let SAL=null, SALCODE='', SALT=null;
-const canSal=()=>isAdmin()||can('hr');
+const canSal=()=>isAdmin()||!!(ME&&ME.dept==='Nhân sự'); // tick thêm quyền xem chấm công không được xem bảng lương
 function salLock(){SAL=null;SALCODE='';clearTimeout(SALT);}
 function salSet(map,code){SAL=map;SALCODE=code;clearTimeout(SALT);SALT=setTimeout(()=>{salLock();render();toast('Đã tự khóa bảng lương');},15*60000);}
 function salOf(s){if(SAL)return Object.assign({},s,SAL[s.id]||{baseSalary:0});if(!isAdmin()&&s.id===ME.id)return s;return null;}
@@ -1264,8 +1264,8 @@ async function exportPayroll(sel,sep){
   return 1;
 }
 function payExportBar(list){
-  if(list.length===1&&!canSal()) return `<div style="margin-bottom:8px"><button class="btn" data-act="payexp">Tải phiếu lương của tôi (Excel)</button></div>`;
-  if(!canSal()||list.length<2) return '';
+  if(list.length===1) return `<div style="margin-bottom:8px"><button class="btn" data-act="payexp" data-sid="${list[0].s.id}">Tải phiếu lương${list[0].s.id===ME.id?' của tôi':''} (Excel)</button></div>`;
+  if(!canSal()) return '';
   const ds=[...new Set(list.map(p=>p.s.dept||''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'vi')), v=S.payExp||'';
   return `<div class="toolbar" style="margin:0 0 10px"><select id="pay-exp" aria-label="Chọn phạm vi xuất lương"><option value="">Tất cả nhân viên</option>${ds.length?`<optgroup label="Theo phòng ban">${ds.map(d=>`<option value="dept:${esc(d)}" ${v==='dept:'+d?'selected':''}>Phòng ${esc(d)}</option>`).join('')}</optgroup>`:''}<optgroup label="Từng người">${list.map(p=>`<option value="${p.s.id}" ${v===p.s.id?'selected':''}>${esc(p.s.name)}</option>`).join('')}</optgroup></select>
     <button class="btn primary" data-act="payexp">Xuất bảng tổng + phiếu lương</button><button class="btn" data-act="payexp" data-sep="1">Tách mỗi người 1 file</button></div>`;
@@ -1968,7 +1968,7 @@ document.addEventListener('click',async e=>{
     await act_(a,'saveHrSettings',[{workStart:g('hr-start'),workEnd:g('hr-end'),breakMin:g('hr-brk'),graceMin:g('hr-grace'),stdDays:g('hr-std'),offDays:g('hr-off'),payByAttendance:g('hr-pay')==='1',otRate:g('hr-ot'),lateRate:g('hr-late'),lateFreeMin:g('hr-lfree'),lateFineMode:g('hr-lmode'),earlyRate:g('hr-early'),careDays:g('hr-care'),reportDeadline:g('hr-rpt'),gpsRequired:g('hr-gps')==='1',radius:g('hr-rad'),officeLat:g('hr-lat').trim(),officeLng:g('hr-lng').trim()}],'Đã lưu cài đặt');}
   else if(act==='finedet')fineDetail(a.dataset.sid);
   else if(act==='payexp'){const se=document.getElementById('pay-exp');a.disabled=true;
-    try{const n=await exportPayroll(se?se.value:'',!!a.dataset.sep);toast(n>1?'Đã tải '+n+' phiếu lương':'Đã tải file Excel');}catch(err){toast(msg(err));}finally{a.disabled=false;}}
+    try{const n=await exportPayroll(a.dataset.sid||(se?se.value:''),!!a.dataset.sep);toast(n>1?'Đã tải '+n+' phiếu lương':'Đã tải file Excel');}catch(err){toast(msg(err));}finally{a.disabled=false;}}
   else if(act==='nagon'){try{const p=await Notification.requestPermission();toast(p==='granted'?'Đã bật thông báo nhắc chấm công':'Trình duyệt chưa cho phép thông báo');}catch(_){toast('Thiết bị này không hỗ trợ thông báo');}render();}
   else if(act==='salopen')await salOpen(a);
   else if(act==='sallock'){salLock();render();toast('Đã ẩn lương');}
