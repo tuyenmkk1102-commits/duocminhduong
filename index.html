@@ -1017,10 +1017,11 @@ function dayCalc(sid,ds){
     let i=toMin(row.checkIn), o=toMin(row.checkOut), missingIn=false;
     // Chỉ có 1 lượt quẹt và lượt đó ở nửa sau ca → đó là giờ RA (quên chấm vào), không tính là đi muộn hàng trăm phút
     if(o==null&&i!=null&&ds<t&&i>=(S0+E0)/2){o=i;i=null;missingIn=true;}
-    const late=(excuse||i==null)?0:Math.max(0,i-S0-sh.graceMin), early=(excuse||o==null)?0:Math.max(0,E0-o);
+    let late=(excuse||i==null)?0:Math.max(0,i-S0-sh.graceMin), early=(excuse||o==null)?0:Math.max(0,E0-o);
     let worked=null,cong=1;
     // Đủ 75% giờ chuẩn = 1 công, đủ 37,5% = ½ công. Đi muộn / về sớm đã trừ tiền theo phút nên không cắt công nữa.
     if(i!=null&&o!=null&&o>i){const a=Math.max(i,S0),b=Math.min(o,E0);worked=Math.max(0,b-a)-((a<720+30&&b>720+30)?sh.breakMin:0);if(excuse)worked=std;cong=worked>=std*0.75?1:worked>=std*0.375?0.5:0;}
+    if(cong===0.5){late=0;early=0;} // đi làm nửa ngày: chỉ tính ½ công, không tính thêm phút muộn / về sớm
     const a={...row,checkIn:i==null?'':row.checkIn,checkOut:missingIn?row.checkIn:row.checkOut};
     return {...base,k:late>0?'late':'ok',a,late,early,worked,cong,missingOut:o==null&&ds<t,missingIn,phone:isPhone(row),note:row.note};
   }
@@ -1062,7 +1063,7 @@ function todayBoard(){
 function monthGrid(list){
   list=list||attStaff();
   const days=monthDaysList(), wd=['CN','T2','T3','T4','T5','T6','T7'], t=todayStr();
-  const half=x=>x.cong===0.5?'<sub>½</sub>':x.cong===0&&x.worked!=null?'<sub>0</sub>':'';
+  const half=x=>x.cong===0&&x.worked!=null?'<sub>0</sub>':'';
   const sym=x=>x.k==='late'?'M'+half(x):x.k==='leave'?(x.paid?'P':'K'):x.k==='absent'?'V':x.k==='notyet'?'·':x.k==='ok'?(x.cong===0.5?'½':x.cong===0&&x.worked!=null?'0':'✓'):'';
   const cls=x=>x.k==='leave'&&!x.paid?'g-unpaid':'g-'+x.k;
   const one=s=>{const M=monthSum(s.id);
@@ -1075,7 +1076,7 @@ function monthGrid(list){
   const n=days.length+9, depts=[...new Set(list.map(s=>s.dept||''))].sort((a,b)=>(a?0:1)-(b?0:1)||a.localeCompare(b,'vi'));
   const rows=list.length>1&&depts.length>1?depts.map(d=>`<tr class="g-dept"><td colspan="${n}">${esc(d||'Chưa xếp phòng ban')}</td></tr>`+list.filter(s=>(s.dept||'')===d).sort((a,b)=>String(a.name).localeCompare(String(b.name),'vi')).map(one).join('')).join(''):list.map(one).join('');
   return `<div class="tablewrap gridwrap"><table class="grid-att"><thead><tr><th class="g-name">Nhân viên</th>${days.map(ds=>{const d=new Date(ds+'T00:00:00');return `<th class="g ${isOffDay(ds)?'g-offh':''}${ds===t?' g-today':''}">${+ds.slice(8)}<div>${wd[d.getDay()]}</div></th>`;}).join('')}<th class="num s1">Công</th><th class="num">Nghỉ CL</th><th class="num">Nghỉ KL</th><th class="num">Vắng</th><th class="num s1">Muộn</th><th class="num">Về sớm</th><th class="num">Tăng ca (h)</th><th class="num" title="Ngày thiếu giờ vào hoặc giờ ra">Thiếu giờ</th></tr></thead><tbody>${rows}</tbody></table></div>
-  <div class="legend" style="margin-top:8px;flex-wrap:wrap"><span><i class="g-ok"></i>✓ Đủ công</span><span><i class="g-ok"></i>½ Nửa công</span><span><i class="g-late"></i>M Đi muộn (M½ = muộn, nửa công)</span><span><i class="g-leave"></i>P Nghỉ có lương</span><span><i class="g-unpaid"></i>K Nghỉ không lương</span><span><i class="g-absent"></i>V Vắng</span><span><i class="g-off"></i>Ngày nghỉ</span><span><i class="g-miss-l"></i>Viền đỏ: thiếu giờ vào/ra</span><span><i class="g-phone-l"></i>Chấm bằng điện thoại</span></div>`;
+  <div class="legend" style="margin-top:8px;flex-wrap:wrap"><span><i class="g-ok"></i>✓ Đủ công</span><span><i class="g-ok"></i>½ Nửa công (không trừ phút)</span><span><i class="g-late"></i>M Đi muộn</span><span><i class="g-leave"></i>P Nghỉ có lương</span><span><i class="g-unpaid"></i>K Nghỉ không lương</span><span><i class="g-absent"></i>V Vắng</span><span><i class="g-off"></i>Ngày nghỉ</span><span><i class="g-miss-l"></i>Viền đỏ: thiếu giờ vào/ra</span><span><i class="g-phone-l"></i>Chấm bằng điện thoại</span></div>`;
 }
 function monthDays(from,to){
   if(!from) return 0; to=to||from;
