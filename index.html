@@ -557,7 +557,7 @@ const FIELDS={
   tasks:[{k:'title',l:'Việc cần làm',t:'text',req:1,wide:1},{k:'staffId',l:'Người phụ trách',t:'staff'},{k:'due',l:'Hạn',t:'date'},
     {k:'priority',l:'Ưu tiên',t:'sel',o:PRIORITY,d:'Trung bình'},{k:'status',l:'Trạng thái',t:'sel',o:TASK_STATUS},{k:'note',l:'Ghi chú / yêu cầu',t:'area',wide:1},{k:'report',l:'Báo cáo kết quả (người làm ghi)',t:'area',wide:1},{k:'link',l:'Link kết quả (video, bài viết, file Drive…)',t:'text',wide:1,ph:'https://…'},{k:'reviewNote',l:'Nhận xét của quản lý',t:'area',wide:1,adminOnly:1}],
   reports:[{k:'date',l:'Ngày',t:'date',req:1},{k:'staffId',l:'Người báo cáo',t:'staff',req:1},
-    {k:'plan',l:'Ngày mai sẽ làm',t:'area',wide:1},{k:'issue',l:'Vướng mắc / cần hỗ trợ',t:'area',wide:1},{k:'done',l:'Việc khác đã làm (báo cáo cũ)',t:'area',wide:1}],
+    {k:'done',l:'Kết quả công việc hôm nay',t:'area',wide:1},{k:'plan',l:'Ngày mai sẽ làm',t:'area',wide:1},{k:'issue',l:'Vướng mắc / cần hỗ trợ',t:'area',wide:1}],
   orders:[{k:'date',l:'Ngày',t:'date',req:1},{k:'code',l:'Mã đơn',t:'text'},{k:'customer',l:'Khách hàng',t:'text'},{k:'phone',l:'Số điện thoại',t:'text'},
     {k:'product',l:'Sản phẩm',t:'text'},{k:'qty',l:'Số lượng',t:'num',d:1},{k:'amount',l:'Thành tiền (₫)',t:'num',req:1},
     {k:'channel',l:'Kênh bán',t:'sel',o:CHANNELS},{k:'status',l:'Trạng thái',t:'sel',o:ORDER_STATUS},{k:'staffId',l:'Nhân viên chốt',t:'staff'},{k:'note',l:'Ghi chú',t:'area',wide:1}],
@@ -743,8 +743,7 @@ function rpCollect(){const box=document.getElementById('rp-items');if(!box)retur
   const other=[...box.querySelectorAll('[data-other]')].map(x=>({name:x.querySelector('.rpi-nm').value.trim(),val:x.querySelector('.rpi-val').value.trim()})).filter(x=>x.name||x.val);
   return {tpl,other};}
 function rpBlock(r,ts,au){
-  return `${rpWork(r)}${ts.length?`<div class="rp-sec"><div class="rp-lab">Việc được giao đã hoàn thành <span class="pill good">${ts.length}</span></div>${rpTasks(ts)}</div>`:''}${rpAuto(au||[])}
-    ${r&&r.done?`<div class="rp-sec"><div class="rp-lab">Việc khác đã làm</div><div class="rp-txt">${esc(r.done)}</div></div>`:''}
+  return `${rpWork(r)}${r&&r.done?`<div class="rp-sec"><div class="rp-lab">Kết quả công việc</div><div class="rp-txt">${esc(r.done)}</div></div>`:''}${ts.length?`<div class="rp-sec"><div class="rp-lab">Việc được giao đã hoàn thành <span class="pill good">${ts.length}</span></div>${rpTasks(ts)}</div>`:''}${rpAuto(au||[])}
     ${r&&r.plan?`<div class="rp-sec"><div class="rp-lab">Ngày mai</div><div class="rp-txt">${esc(r.plan)}</div></div>`:''}
     ${r&&r.issue?`<div class="rp-sec rp-issue"><div class="rp-lab">Vướng mắc / cần hỗ trợ</div><div class="rp-txt">${esc(r.issue)}</div></div>`:''}
     ${!r&&!ts.length&&!(au||[]).length?'<div class="muted small">Không có dữ liệu.</div>':''}`;}
@@ -775,9 +774,9 @@ function rpMonth(){const p=PER(),list=rpMonthList(),row=o=>`<div class="rpi-line
     <div class="small muted">${m.late} lần nộp muộn · ${m.tasks} việc được giao đã xong</div>
     ${m.items.length?`<div class="rp-sec"><div class="rp-lab">Đầu mục công việc <span class="pill good">Tổng ${nf(m.tot)}</span></div>${m.items.map(row).join('')}</div>`:''}
     ${m.others.length?`<div class="rp-sec"><div class="rp-lab">Công việc khác</div>${m.others.map(row).join('')}</div>`:''}
+    ${m.olds.length?`<div class="rp-sec"><div class="rp-lab">Kết quả công việc</div><div class="rp-txt">${esc(m.olds.join('\n'))}</div></div>`:''}
     ${m.issues.length?`<div class="rp-sec rp-issue"><div class="rp-lab">Vướng mắc đã báo</div><div class="rp-txt">${esc(m.issues.join('\n'))}</div></div>`:''}
-    ${m.olds.length?`<div class="rp-sec"><div class="rp-lab">Việc khác (báo cáo cũ)</div><div class="rp-txt">${esc(m.olds.join('\n'))}</div></div>`:''}
-    ${!m.items.length&&!m.others.length?'<div class="muted small" style="margin-top:8px">Chưa có số liệu trong kỳ này.</div>':''}</div>`).join('')}</div>`;}
+    ${!m.items.length&&!m.others.length&&!m.olds.length?'<div class="muted small" style="margin-top:8px">Chưa có số liệu trong kỳ này.</div>':''}</div>`).join('')}</div>`;}
 function rpExport(){const p=PER(),list=rpMonthList(),wb=XW.book(),range=`Từ ${fullDmy(p.from)} đến ${fullDmy(p.to)}`;
   const box={border:1},num={border:1,h:'right'},wrap={border:1,wrap:1},head={b:1,fill:'D9D9D9',border:1,h:'center',wrap:1},sec={b:1,fill:'EBEED8',border:1};
   const ws=wb.sheet('Tổng hợp');[28,18,11,10,10,14,14].forEach((w,i)=>ws.width(i,w));
@@ -789,6 +788,7 @@ function rpExport(){const p=PER(),list=rpMonthList(),wb=XW.book(),range=`Từ ${
     let r=3;const block=(title,rows)=>{if(!rows.length)return;w.merge(r,0,r,3,title,sec);r++;['Công việc','Tổng số','Số ngày','Ghi chú theo ngày'].forEach((t,i)=>w.set(r,i,t,head));r++;
       rows.forEach(o=>{w.set(r,0,o.name,wrap);w.set(r,1,o.tot,num);w.set(r,2,o.days,num);w.set(r,3,o.texts.join('\n'),wrap);r++;});r++;};
     block('ĐẦU MỤC CÔNG VIỆC',m.items);block('CÔNG VIỆC KHÁC',m.others);
+    if(m.olds.length){w.merge(r,0,r,3,'KẾT QUẢ CÔNG VIỆC',sec);r++;m.olds.forEach(x=>{w.merge(r,0,r,3,x,wrap);r++;});r++;}
     if(m.issues.length){w.merge(r,0,r,3,'VƯỚNG MẮC ĐÃ BÁO',sec);r++;m.issues.forEach(x=>{w.merge(r,0,r,3,x,wrap);r++;});}});
   wb.save(`Bao-cao-cong-viec-${p.from}_${p.to}.xlsx`);}
 /* Tổng kết kỳ: tỉ lệ nộp báo cáo + việc được giao từng người */
@@ -2019,7 +2019,7 @@ document.getElementById('form').addEventListener('submit',async e=>{
   if(col==='tasks'){const old=id&&D.tasks.find(x=>x.id===id);obj.doneAt=obj.status==='Xong'?((old&&old.status==='Xong'&&old.doneAt)||todayStr()):'';}
   if(col==='reports'){const it=rpCollect();
     if(it){if(it.other.some(x=>!x.name)){formErr('Công việc khác: nhập tên việc cho dòng đã điền số lượng.');return;}obj.items=JSON.stringify(it);}
-    if(!obj.done&&!obj.plan&&!obj.issue&&!(it&&(it.other.length||it.tpl.some(x=>x.val)))){formErr('Điền ít nhất một đầu mục, công việc khác, ngày mai làm gì hoặc vướng mắc.');return;}}
+    if(!obj.done&&!obj.plan&&!obj.issue&&!(it&&(it.other.length||it.tpl.some(x=>x.val)))){formErr('Điền ít nhất một đầu mục, công việc khác, kết quả công việc, ngày mai làm gì hoặc vướng mắc.');return;}}
   if(col==='shifts'&&obj.end<=obj.start){formErr('Giờ ra phải sau giờ vào.');return;}
   if(col==='staff'){obj.username=String(obj.username||'').toLowerCase();if(String(obj.pin).length<4){formErr('Mật khẩu tối thiểu 4 ký tự.');return;}
     if(!/^[a-z0-9._@-]{3,40}$/.test(obj.username)){formErr('Tên đăng nhập chỉ gồm chữ không dấu, số, dấu chấm, gạch dưới (3–40 ký tự).');return;}
@@ -2222,8 +2222,8 @@ const FORM_HOOKS={
   tasks(rec){if(isAdmin()&&(!rec||rec.status==='Xong'||rec.reviewNote))return;const b=document.querySelector('#form-fields .fld[data-k="reviewNote"]');if(b&&(!isAdmin()?!(rec&&rec.reviewNote):true))b.hidden=true;},
   reports(rec){const d=(rec&&rec.date)||todayStr(),sid=(rec&&rec.staffId)||ME.id,ts=tasksDoneOn(sid,d),au=autoItems(sid,d).filter(([g])=>g!=='Checklist');
     const box=document.createElement('div');box.className='fld wide';box.innerHTML=`<div class="notice">${ts.length||au.length?`<b>Hệ thống đã tự ghi cho ngày ${fullDmy(d)}:</b>${ts.length?`<div style="margin-top:6px"><span class="tag">Việc được giao</span> ${ts.map(x=>esc(x.title)).join(' · ')}</div>`:''}${au.map(([g,xs])=>`<div style="margin-top:4px"><span class="tag">${esc(g)}</span> ${xs.map(esc).join(' · ')}</div>`).join('')}<div class="small muted" style="margin-top:6px">Không cần ghi lại những việc này.</div>`:'Hôm nay hệ thống chưa ghi nhận việc nào (việc được giao, Media, Ads…).'}</div>`;
-    const w=document.getElementById('form-fields'),plan=w.querySelector('.fld[data-k="plan"]');if(!ts.length&&!au.length)box.hidden=true;w.insertBefore(box,plan);
-    const old=w.querySelector('.fld[data-k="done"]');if(old&&!(rec&&rec.done))old.hidden=true;
+    const w=document.getElementById('form-fields'),plan=w.querySelector('.fld[data-k="done"]')||w.querySelector('.fld[data-k="plan"]');if(!ts.length&&!au.length)box.hidden=true;w.insertBefore(box,plan);
+    const res=w.querySelector('#f_done');if(res)res.placeholder='Ghi kết quả đạt được: việc đã xong, số liệu, khách đã chốt, vấn đề đã xử lý…';
     const can=!rec||canEdit('reports',rec),ro=can?'':' disabled',it=document.createElement('div');it.className='fld wide';it.id='rp-items';
     const oth=(x={})=>`<div class="rpi-row" data-other><input class="rpi-nm" aria-label="Tên việc" placeholder="Tên việc" value="${esc(x.name||'')}"${ro}><input class="rpi-val" aria-label="Số lượng" placeholder="Số / chữ" value="${esc(x.val==null?'':x.val)}"${ro}>${can?'<button type="button" class="iconbtn" data-rpdel aria-label="Xóa dòng">✕</button>':''}</div>`;
     it.innerHTML=`<div class="rp-lab">Đầu mục công việc</div><div id="rp-tpl"></div>${can?'<div class="rpi-row"><input class="rpi-nm" id="rp-newtpl" aria-label="Tên đầu mục mới" placeholder="Tên đầu mục mới (hiện sẵn mỗi ngày)"><button type="button" class="btn" id="rp-addtpl">+ Thêm đầu mục</button></div>':''}<div class="rp-lab" style="margin-top:12px">Công việc khác</div><div id="rp-other">${rpItems(rec).other.map(oth).join('')}</div>${can?'<button type="button" class="btn" id="rp-addother" style="margin-top:6px">+ Thêm việc khác</button>':''}`;
